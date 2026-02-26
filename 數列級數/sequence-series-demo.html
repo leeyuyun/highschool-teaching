@@ -1,0 +1,1267 @@
+﻿<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>數列 & 級數互動練習</title>
+  <style>
+    :root {
+      --bg-a: #081028;
+      --bg-b: #0f2b53;
+      --panel: rgba(9, 20, 44, 0.9);
+      --ink: #e9f1ff;
+      --muted: #afbdd6;
+      --accent: #3ac7ff;
+      --accent-2: #7af0c8;
+      --danger: #ff7eb6;
+      --ok: #3fe7a4;
+      --border: rgba(174, 204, 255, 0.22);
+      --font-body: 'Noto Sans TC', 'PingFang TC', 'MingLiU', serif;
+      --font-head: 'Noto Serif TC', 'Times New Roman', serif;
+      --shadow: 0 14px 30px rgba(4, 12, 28, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+
+    body {
+      background:
+        radial-gradient(1200px 400px at 5% 0%, rgba(58, 199, 255, 0.12), transparent 42%),
+        radial-gradient(800px 260px at 95% 3%, rgba(122, 240, 200, 0.14), transparent 48%),
+        linear-gradient(120deg, var(--bg-a), var(--bg-b));
+      color: var(--ink);
+      font-family: var(--font-body);
+    }
+
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 24px 16px 56px;
+      animation: fade-in 0.45s ease;
+    }
+
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .title { font-family: var(--font-head); letter-spacing: 0.03em; }
+    .subtitle { color: var(--muted); margin-top: 6px; font-size: 14px; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(120px, auto));
+      gap: 10px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      background: linear-gradient(120deg, #2d5cff, #0da5ff);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    button:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(21, 133, 255, 0.3); }
+    button.secondary { background: rgba(255, 255, 255, 0.09); border: 1px solid rgba(175, 190, 218, 0.35); }
+    button.warning { background: linear-gradient(120deg, #ff6b8f, #ff8f5a); }
+    button.success { background: linear-gradient(120deg, #2fcf87, #35e7a5); }
+
+    .mode-pill {
+      color: #d7ecff;
+      font-size: 13px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(182, 214, 255, 0.28);
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    .stats { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .stat {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px dashed rgba(170, 194, 239, 0.26);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+
+    .question-title { font-family: var(--font-head); margin: 0 0 10px; font-size: 22px; }
+    .question-body {
+      background: rgba(255, 255, 255, 0.04);
+      border-left: 3px solid var(--accent);
+      padding: 12px;
+      border-radius: 8px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .meta { font-size: 13px; color: var(--muted); margin-top: 10px; }
+
+    .sequence-preview { margin-top: 12px; display: grid; gap: 8px; }
+    .term-track { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+    .term {
+      min-width: 56px;
+      text-align: center;
+      border: 1px solid rgba(183, 210, 255, 0.22);
+      border-radius: 8px;
+      padding: 8px 6px;
+      background: rgba(6, 17, 41, 0.45);
+      flex-shrink: 0;
+    }
+
+    .answer-area { margin-top: 14px; }
+    .answer-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin: 8px 0;
+    }
+
+    input[type='text'] {
+      flex: 1;
+      min-width: 180px;
+      padding: 12px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(170, 198, 248, 0.35);
+      background: rgba(4, 13, 38, 0.7);
+      color: var(--ink);
+    }
+
+    .choice-list { display: grid; gap: 8px; }
+    .choice {
+      border: 1px solid rgba(173, 199, 243, 0.25);
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(5, 18, 44, 0.6);
+    }
+
+    .feedback {
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-top: 12px;
+      font-size: 15px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+    .feedback.success { background: rgba(63, 231, 164, 0.14); border: 1px solid rgba(63, 231, 164, 0.32); }
+    .feedback.error { background: rgba(255, 126, 182, 0.14); border: 1px solid rgba(255, 126, 182, 0.32); }
+
+    .hint-box {
+      border-left: 3px solid var(--accent-2);
+      padding: 10px 12px;
+      background: rgba(122, 240, 200, 0.08);
+      margin-top: 12px;
+      border-radius: 8px;
+      color: #dfffee;
+      display: none;
+    }
+
+    .timer { font-weight: 700; color: #ffdf87; }
+    .result-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+    .result-table th,
+    .result-table td { border: 1px solid rgba(177, 200, 241, 0.22); padding: 8px; text-align: left; vertical-align: top; }
+    .result-table th { background: rgba(255, 255, 255, 0.06); }
+    .ok { color: var(--ok); font-weight: 700; }
+    .bad { color: var(--danger); font-weight: 700; }
+
+    .hidden { display: none; }
+    .progress { margin-top: 8px; height: 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.15); overflow: hidden; }
+    .bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: inherit; transition: width 0.35s ease; }
+
+    .footnote { margin-top: 10px; color: var(--muted); font-size: 13px; }
+    .small { font-size: 12px; color: var(--muted); }
+    .type-filter {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px dashed rgba(166, 197, 241, 0.24);
+      border-radius: 10px;
+    }
+
+    .type-filter label {
+      color: var(--muted);
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+    }
+
+    .type-filter select,
+    .type-filter button {
+      width: 100%;
+    }
+
+    .type-map {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      align-items: start;
+    }
+
+    @keyframes fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    @media (min-width: 800px) {
+      .toolbar { grid-template-columns: repeat(4, minmax(100px, auto)); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="card">
+      <div class="topbar">
+        <div>
+          <h1 class="title">高中數列/級數互動學習平台</h1>
+          <div class="subtitle">練習題＋考試題｜等差、等比、級數、無窮級數題型隨機變形</div>
+        </div>
+        <div class="mode-pill" id="modePill">模式：練習模式</div>
+      </div>
+
+      <div class="toolbar" style="margin-top: 12px;">
+        <button id="practiceModeBtn">切換到 練習模式</button>
+        <button class="secondary" id="examModeBtn">切換到 考試模式</button>
+        <button class="warning" id="hintBtn">看提示</button>
+        <button class="secondary" id="nextBtn">下一題</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat">題號：<span id="qIndex">0</span>/<span id="qTotal">0</span></div>
+        <div class="stat">正確：<span id="correctCount">0</span></div>
+        <div class="stat">錯題：<span id="wrongCount">0</span></div>
+        <div class="stat">已作答：<span id="answeredCount">0</span></div>
+        <div class="stat">考試時間：<span id="timer" class="timer">—</span></div>
+      </div>
+    </header>
+
+    <main class="card">
+      <div class="progress"><div class="bar" id="progressBar"></div></div>
+
+      <h2 class="question-title" id="questionTitle">準備開始</h2>
+      <div class="question-body" id="questionBody">按「開始新一題」或「開始考試」。</div>
+      <div class="meta" id="questionMeta"></div>
+      <div class="sequence-preview" id="sequencePreview"></div>
+
+      <div class="answer-area">
+        <div id="choiceArea" class="choice-list hidden"></div>
+        <div id="fillArea" class="answer-row">
+          <input id="answerInput" type="text" placeholder="輸入答案（可輸入分數，例如 3/4）" />
+          <button id="submitBtn">提交答案</button>
+        </div>
+      </div>
+
+      <div id="hintArea" class="hint-box"></div>
+      <div id="feedbackArea" class="feedback hidden"></div>
+
+      <div id="actionArea" class="answer-row" style="margin-top: 12px;">
+        <button class="secondary" id="startPracticeBtn">開始練習</button>
+        <button class="success" id="startExamBtn">開始考試（10題）</button>
+        <button class="secondary" id="reviewWrongBtn">錯題重練</button>
+      </div>
+    </main>
+
+    <section class="card hidden" id="resultSection">
+      <h3>考試結果</h3>
+      <div id="examSummary"></div>
+      <div id="examTableWrap"></div>
+      <button id="closeResultBtn">返回模式</button>
+    </section>
+
+    <section class="card">
+      <h3>題目類型對照表（現有題庫）</h3>
+      <div class="type-filter">
+        <label>
+          題庫來源
+          <select id="filterSource">
+            <option value="all">全部</option>
+            <option value="external">外部題庫</option>
+            <option value="builtin">內建題庫</option>
+          </select>
+        </label>
+        <label>
+          題型（topic）
+          <select id="filterTopic">
+            <option value="">全部</option>
+          </select>
+        </label>
+        <label>
+          題型敘述（title）
+          <select id="filterTitle">
+            <option value="">全部</option>
+          </select>
+        </label>
+        <div class="answer-row">
+          <button class="secondary" id="clearFilterBtn" type="button">清除篩選</button>
+        </div>
+      </div>
+      <p id="filterSummary" class="footnote">目前可抽題數：載入中</p>
+      <div class="type-map">
+        <div>
+          <p><strong>外部題庫 Topic（15 種）</strong></p>
+          <ul>
+            <li>對消型</li>
+            <li>數列判斷</li>
+            <li>數列極限</li>
+            <li>數學歸納法</li>
+            <li>無窮等比級數</li>
+            <li>等差中項</li>
+            <li>等差應用</li>
+            <li>等差數列</li>
+            <li>等差級數</li>
+            <li>等比應用</li>
+            <li>等比數列</li>
+            <li>等比級數</li>
+            <li>級數求和</li>
+            <li>通項公式</li>
+            <li>遞迴數列</li>
+          </ul>
+        </div>
+        <div>
+          <p><strong>外部題庫 Title（20 種）</strong></p>
+          <ul>
+            <li>第 n 項</li>
+            <li>前 n 項和</li>
+            <li>代入算項</li>
+            <li>情境題</li>
+            <li>反推公差</li>
+            <li>反推公比</li>
+            <li>無窮和</li>
+            <li>已知 a2、a4 求 a3</li>
+            <li>已知 a2、a3 求 a1</li>
+            <li>等差型</li>
+            <li>等比型</li>
+            <li>已知和反推首項</li>
+            <li>序列類型</li>
+            <li>極限值</li>
+            <li>Σk</li>
+            <li>Σk²</li>
+            <li>Σ(2k-1)</li>
+            <li>Σ(1/k-1/(k+1))</li>
+            <li>重組求和</li>
+            <li>命題判斷</li>
+          </ul>
+        </div>
+        <div>
+          <p><strong>內建題庫 Title（13 種）</strong></p>
+          <ul>
+            <li>等差數列第 n 項</li>
+            <li>反推公差</li>
+            <li>前 n 項和</li>
+            <li>等比數列第 n 項</li>
+            <li>等比級數前 n 項和</li>
+            <li>無窮級數和</li>
+            <li>情境題</li>
+            <li>反推首項</li>
+            <li>中項題</li>
+            <li>從和反推首項</li>
+            <li>反推公比</li>
+            <li>等比中項</li>
+            <li>辨識數列類型</li>
+          </ul>
+        </div>
+      </div>
+      <p class="footnote">提示：題目會依 <code>topic</code> 當作類型主軸做抽題，<code>title</code> 是更細的題目敘述型態。</p>
+    </section>
+
+    <footer class="footnote">建議每個主題先在練習模式做 10 題感受，再進入考試模式。</footer>
+  </div>
+
+  <script>
+    const state = {
+      mode: 'practice',
+      current: null,
+      answerRevealed: false,
+      wrongQuestions: [],
+      questionBank: [],
+      questionBankLoaded: false,
+      practice: { total: 0, correct: 0, wrong: 0, answered: 0 },
+      exam: {
+        questions: [],
+        answers: [],
+        index: 0,
+        started: false,
+        timer: 0,
+        intervalId: null,
+        correct: 0
+      }
+    };
+
+    const CONFIG = { examMinutes: 8, examQuestions: 10 };
+    const BANK_CONFIG = {
+      sourceUrl: './sequence-series-bank.json',
+      useExternalRateByMode: { practice: 0.65, exam: 0.9 },
+      externalTopicWeights: {
+        practice: {
+          '等差數列': 10,
+          '等比數列': 10,
+          '等差級數': 8,
+          '等比級數': 8,
+          '等差應用': 7,
+          '等比應用': 7,
+          '通項公式': 6,
+          '等差中項': 5,
+          '遞迴數列': 6,
+          '級數求和': 5,
+          '等比中項': 5,
+          '數列判斷': 4,
+          '無窮等比級數': 4,
+          '對消型': 3,
+          '數列極限': 3,
+          '數學歸納法': 2
+        },
+        exam: {
+          '等差數列': 8,
+          '等比數列': 8,
+          '等差級數': 7,
+          '等比級數': 7,
+          '遞迴數列': 6,
+          '級數求和': 6,
+          '通項公式': 6,
+          '數列極限': 4,
+          '數學歸納法': 4,
+          '等差應用': 4,
+          '等比應用': 4,
+          '無窮等比級數': 5,
+          '等差中項': 3,
+          '等比中項': 3,
+          '對消型': 2,
+          '數列判斷': 2
+        }
+      }
+    };
+
+    const ui = {
+      modePill: document.getElementById('modePill'),
+      qIndex: document.getElementById('qIndex'),
+      qTotal: document.getElementById('qTotal'),
+      correctCount: document.getElementById('correctCount'),
+      wrongCount: document.getElementById('wrongCount'),
+      answeredCount: document.getElementById('answeredCount'),
+      timer: document.getElementById('timer'),
+      progressBar: document.getElementById('progressBar'),
+      questionTitle: document.getElementById('questionTitle'),
+      questionBody: document.getElementById('questionBody'),
+      questionMeta: document.getElementById('questionMeta'),
+      sequencePreview: document.getElementById('sequencePreview'),
+      choiceArea: document.getElementById('choiceArea'),
+      fillArea: document.getElementById('fillArea'),
+      answerInput: document.getElementById('answerInput'),
+      hintArea: document.getElementById('hintArea'),
+      feedbackArea: document.getElementById('feedbackArea'),
+      reviewWrongBtn: document.getElementById('reviewWrongBtn'),
+      startPracticeBtn: document.getElementById('startPracticeBtn'),
+      startExamBtn: document.getElementById('startExamBtn'),
+      practiceModeBtn: document.getElementById('practiceModeBtn'),
+      examModeBtn: document.getElementById('examModeBtn'),
+      submitBtn: document.getElementById('submitBtn'),
+      hintBtn: document.getElementById('hintBtn'),
+      nextBtn: document.getElementById('nextBtn'),
+      resultSection: document.getElementById('resultSection'),
+      examSummary: document.getElementById('examSummary'),
+      examTableWrap: document.getElementById('examTableWrap'),
+      closeResultBtn: document.getElementById('closeResultBtn')
+    };
+
+    const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+    const randChoice = (arr) => arr[randInt(0, arr.length - 1)];
+    const shuffle = (arr) => {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = randInt(0, i);
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
+    const fmtNum = (x) => (Number.isInteger(x) ? String(x) : Number.parseFloat(x.toFixed(8)).toString());
+    const parseAnswer = (raw) => {
+      if (raw === null || raw === undefined) return NaN;
+      let s = String(raw).trim().replace(/，/g, '.');
+      if (!s) return NaN;
+      if (/^-?\d+\/[-+]?\d+$/.test(s)) {
+        const [n, d] = s.split('/').map(Number);
+        return n / d;
+      }
+      return Number(s);
+    };
+    const cleanText = (v) => (v === null || v === undefined ? '' : String(v).trim());
+    const normalizeTerms = (raw) => {
+      if (!Array.isArray(raw)) return [];
+      return raw
+        .map((v) => Number(v))
+        .filter((v) => Number.isFinite(v));
+    };
+    const almostEq = (a, b) => Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= 1e-6;
+
+    const sequenceTerms = (type, a1, r, n, options = {}) => {
+      const arr = [];
+      const limit = Math.min(n, options.limit ?? 8);
+      for (let i = 1; i <= limit; i++) {
+        arr.push(type === 'arith' ? a1 + (i - 1) * r : a1 * Math.pow(r, i - 1));
+      }
+      return arr;
+    };
+
+    const pickWeighted = (items) => {
+      const total = items.reduce((sum, item) => sum + (item.weight || 1), 0);
+      let pointer = Math.random() * total;
+      for (const item of items) {
+        pointer -= item.weight || 1;
+        if (pointer < 0) return item;
+      }
+      return items[items.length - 1];
+    };
+
+    const toChoiceIndex = (options, answer) => {
+      if (!Array.isArray(options)) return -1;
+      if (Number.isInteger(answer) && answer >= 0 && answer < options.length) return answer;
+      if (typeof answer === 'string' && Number.isInteger(Number(answer)) && Number(answer) >= 0 && Number(answer) < options.length) return Number(answer);
+      if (answer && Number.isInteger(answer.index) && answer.index >= 0 && answer.index < options.length) return answer.index;
+      const normalized = cleanText(answer);
+      if (!normalized) return -1;
+      return options.indexOf(normalized);
+    };
+
+    const normalizeExternalQuestion = (rawQuestion) => {
+      if (!rawQuestion || typeof rawQuestion !== 'object') return null;
+      const topic = cleanText(rawQuestion.topic) || '外部題庫';
+      const title = cleanText(rawQuestion.title) || '題目';
+      const prompt = cleanText(rawQuestion.prompt);
+      const kind = rawQuestion.kind === 'choice' ? 'choice' : 'fill';
+      const formula = cleanText(rawQuestion.formula);
+      const hint = cleanText(rawQuestion.hint);
+      const explain = cleanText(rawQuestion.explain);
+      const scope = cleanText(rawQuestion.scope) || 'both';
+      const terms = normalizeTerms(rawQuestion.terms);
+
+      if (!prompt) return null;
+
+      if (kind === 'choice') {
+        if (!Array.isArray(rawQuestion.options) || rawQuestion.options.length < 2) return null;
+        const options = rawQuestion.options.map((item) => cleanText(item)).filter((item) => item);
+        if (!options.length) return null;
+        const answerIndex = toChoiceIndex(options, rawQuestion.answer);
+        if (answerIndex < 0 || answerIndex >= options.length) return null;
+        return {
+          kind,
+          topic,
+          title,
+          prompt,
+          formula,
+          hint,
+          explain,
+          options,
+          answer: { index: answerIndex },
+          scope,
+          terms,
+          source: 'external'
+        };
+      }
+
+      const answer = parseAnswer(rawQuestion.answer);
+      if (!Number.isFinite(answer)) return null;
+      const answerText = cleanText(rawQuestion.answer === null || rawQuestion.answer === undefined ? fmtNum(answer) : rawQuestion.answer);
+      return {
+        kind,
+        topic,
+        title,
+        prompt,
+        formula,
+        hint,
+        explain,
+        answer,
+        answerText,
+        scope,
+        terms,
+        source: 'external'
+      };
+    };
+
+    const loadExternalQuestionBank = async () => {
+      try {
+        const resp = await fetch(BANK_CONFIG.sourceUrl, { cache: 'no-store' });
+        if (!resp.ok) {
+          state.questionBankLoaded = false;
+          return;
+        }
+        const payload = await resp.json();
+        const rawItems = Array.isArray(payload)
+          ? payload
+          : (Array.isArray(payload.items) ? payload.items : (Array.isArray(payload.questions) ? payload.questions : []));
+        const normalized = rawItems.map(normalizeExternalQuestion).filter(Boolean);
+        const uniq = [];
+        const seen = new Set();
+        normalized.forEach((item) => {
+          const key = `${item.topic}::${item.prompt}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          uniq.push(item);
+        });
+        state.questionBank = uniq;
+        state.questionBankLoaded = true;
+      } catch {
+        state.questionBank = [];
+        state.questionBankLoaded = false;
+      }
+    };
+
+    const getExternalTopicWeight = (topic, mode = 'practice') => {
+      const byMode = BANK_CONFIG.externalTopicWeights?.[mode] || {};
+      const defaultWeight = BANK_CONFIG.externalTopicWeights?.default?.[topic];
+      const weight = byMode[topic];
+      if (Number.isFinite(weight) && weight > 0) return weight;
+      if (Number.isFinite(defaultWeight) && defaultWeight > 0) return defaultWeight;
+      return 1;
+    };
+
+    const pickExternalQuestion = (mode = 'practice') => {
+      if (!state.questionBank.length) return null;
+      const candidate = state.questionBank.filter((q) => q.scope === 'both' || q.scope === mode);
+      if (!candidate.length) return null;
+      const weighted = candidate.map((question) => ({
+        question,
+        weight: getExternalTopicWeight(question.topic, mode)
+      }));
+      const picked = pickWeighted(weighted);
+      return picked ? JSON.parse(JSON.stringify(picked.question)) : null;
+    };
+
+    const useExternalQuestion = (mode = 'practice') => {
+      if (state.questionBank.length === 0) return false;
+      const rateByMode = BANK_CONFIG.useExternalRateByMode?.[mode];
+      const rate = Number.isFinite(rateByMode) ? rateByMode : (BANK_CONFIG.useExternalRate || 0);
+      return Math.random() < rate;
+    };
+
+    const mkArithNthTerm = () => {
+      const a1 = randInt(-6, 10);
+      const d = randChoice([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 7]);
+      const n = randInt(3, 12);
+      const an = a1 + (n - 1) * d;
+      return {
+        kind: 'fill',
+        topic: '等差數列',
+        title: '等差數列第 n 項',
+        prompt: `已知 a_n = a_1 + (n-1)d\n已知 a_1=${a1}，d=${d}，n=${n}。\n求 a_${n}。`,
+        answer: an,
+        hint: `使用公式 a_n = a_1 + (n-1)d = ${a1} + (${n} - 1)×(${d})。`,
+        explain: `a_n = ${a1} + (${n - 1})×${d} = ${an}。`,
+        formula: 'a_n = a_1 + (n-1)d',
+        terms: sequenceTerms('arith', a1, d, n, { limit: 8 })
+      };
+    };
+
+    const mkArithDiff = () => {
+      const n = randInt(3, 12);
+      const a1 = randInt(-10, 10);
+      const d = randChoice([-7, -4, -2, -1, 1, 2, 3, 4, 5, 6, 8]);
+      const an = a1 + (n - 1) * d;
+      return {
+        kind: 'fill',
+        topic: '等差數列',
+        title: '反推公差',
+        prompt: `已知等差數列 a_1=${a1}，a_${n}=${an}。\n求公差 d。`,
+        answer: d,
+        hint: `從 a_n = a_1 + (n-1)d 得 d = (a_n - a_1)/(n-1)。`,
+        explain: `d = (${an}-${a1})/(${n - 1}) = ${d}。`,
+        formula: 'd = (a_n - a_1)/(n-1)',
+        terms: sequenceTerms('arith', a1, d, n, { limit: 8 })
+      };
+    };
+
+    const mkArithSum = () => {
+      const a1 = randInt(-8, 8);
+      const d = randChoice([2, 3, 4, 5, 6, 7, -2, -3, -4]);
+      const n = randInt(4, 11);
+      const an = a1 + (n - 1) * d;
+      const sn = n * (a1 + an) / 2;
+      return {
+        kind: 'fill',
+        topic: '等差級數',
+        title: '前 n 項和',
+        prompt: `等差數列 a_1=${a1}，d=${d}。\n求前 ${n} 項和 S_${n}。`,
+        answer: sn,
+        hint: `S_n = n(a_1 + a_n)/2，先求 a_n。`,
+        explain: `a_${n} = ${a1} + (${n - 1})×${d} = ${an}，所以 S_${n} = ${n}( ${a1} + ${an} )/2 = ${sn}。`,
+        formula: 'S_n = n(a_1 + a_n)/2',
+        terms: sequenceTerms('arith', a1, d, n, { limit: 8 })
+      };
+    };
+
+    const mkGeoNthTerm = () => {
+      const a1 = randInt(1, 6);
+      const r = randChoice([-4, -3, -2, 2, 3, 4]);
+      const n = randInt(3, 7);
+      const an = a1 * Math.pow(r, n - 1);
+      return {
+        kind: 'fill',
+        topic: '等比數列',
+        title: '等比數列第 n 項',
+        prompt: `已知等比數列 a_n = a_1 × r^(n-1)。\n已知 a_1=${a1}，r=${r}，n=${n}。\n求 a_${n}。`,
+        answer: an,
+        hint: '代入 a_n = a_1 r^(n-1)。',
+        explain: `a_${n} = ${a1}×(${r})^(${n - 1}) = ${an}。`,
+        formula: 'a_n = a_1 r^(n-1)',
+        terms: sequenceTerms('geo', a1, r, n, { limit: 8 })
+      };
+    };
+
+    const mkGeoSum = () => {
+      const a1 = randInt(1, 6);
+      const r = randChoice([2, 3, 4, -2, -3]);
+      const n = randInt(2, 7);
+      const sn = a1 * (Math.pow(r, n) - 1) / (r - 1);
+      return {
+        kind: 'fill',
+        topic: '等比級數',
+        title: '等比級數前 n 項和',
+        prompt: `等比數列 a_1=${a1}，r=${r}。\n求 S_${n}。`,
+        answer: sn,
+        hint: 'S_n = a_1(r^n - 1)/(r - 1)。',
+        explain: `S_${n} = ${a1}×(${r}^${n} - 1)/(${r} - 1) = ${sn}。`,
+        formula: 'S_n = a_1(r^n - 1)/(r - 1)',
+        terms: sequenceTerms('geo', a1, r, n, { limit: 7 })
+      };
+    };
+
+    const mkGeoInfinite = () => {
+      const a1 = randInt(2, 9);
+      const frac = randChoice([[1, 2], [2, 3], [3, 4], [-1, 2]]);
+      const r = frac[0] / frac[1];
+      const value = a1 / (1 - r);
+      return {
+        kind: 'fill',
+        topic: '無窮等比級數',
+        title: '無窮級數和',
+        prompt: `已知無窮等比級數 a_1=${a1}，公比 r=${frac[0]}/${frac[1]}。\n求 S = a_1 + a_2 + ... 。`,
+        answer: value,
+        hint: '|r|<1 時，S = a_1/(1-r)。',
+        explain: `S = ${a1} / (1 - ${fmtNum(r)}) = ${fmtNum(value)}。`,
+        formula: 'S = a_1/(1-r)',
+        terms: sequenceTerms('geo', a1, r, 8, { limit: 8 })
+      };
+    };
+
+    const mkArithContext = () => {
+      const d = randChoice([5, 6, 8, 9, -4, -5]);
+      const a1 = randInt(30, 70);
+      const n = randInt(4, 8);
+      const an = a1 + (n - 1) * d;
+      const sn = n * (a1 + an) / 2;
+      return {
+        kind: 'fill',
+        topic: '等差應用',
+        title: '情境題',
+        prompt: `某人第一個月收入 ${a1} 元，之後每月增加 ${d} 元。第 ${n} 個月收入為 ${an} 元。\n請求前 ${n} 個月總收入。`,
+        answer: sn,
+        hint: '等差級數前 n 項和公式即可。',
+        explain: `S_${n}= ${n}( ${a1}+${an} )/2 = ${sn}。`,
+        formula: 'S_n = n(a_1 + a_n)/2',
+        terms: sequenceTerms('arith', a1, d, n, { limit: 8 })
+      };
+    };
+
+    const mkGeoBackSolveFirst = () => {
+      const r = randChoice([2, 3, 4, -2, -3]);
+      const a1 = randInt(-3, 6);
+      const n = randInt(2, 9);
+      const target = a1 * Math.pow(r, n - 1);
+      return {
+        kind: 'fill',
+        topic: '等比應用',
+        title: '反推首項',
+        prompt: `等比數列 a_1=${a1}，r=${r}。\n已知 a_${n}=${target}，求 a_1。`,
+        answer: a1,
+        hint: '反推 a_1 = a_n / r^(n-1)。',
+        explain: `a_1 = ${target} / ${Math.pow(r, n - 1)} = ${a1}。`,
+        formula: 'a_n = a_1 r^(n-1)',
+        terms: sequenceTerms('geo', a1, r, n, { limit: 8 })
+      };
+    };
+
+    const mkArithFindFirstFromMiddle = () => {
+      const a1 = randInt(-12, 14);
+      const d = randChoice([-6, -4, -2, -1, 1, 2, 3, 4, 6]);
+      const a2 = a1 + d;
+      const a4 = a1 + 3 * d;
+      const a3 = a1 + 2 * d;
+      return {
+        kind: 'fill',
+        topic: '等差中項',
+        title: '中項題',
+        prompt: `已知等差數列 a_2=${a2}，a_4=${a4}。\n求 a_3。`,
+        answer: a3,
+        hint: '等差數列中項 = 相鄰兩項平均數。(a_2+a_4)/2。',
+        explain: `a_3 = (a_2+a_4)/2 = (${a2}+${a4})/2 = ${a3}。`,
+        formula: 'a_n 為等差中項',
+        terms: [a1, a2, a3, a4, a1 + 4 * d]
+      };
+    };
+
+    const mkArithFirstFromSum = () => {
+      const n = randInt(4, 10);
+      const d = randChoice([-6, -4, -2, -1, 1, 2, 3, 4, 6]);
+      const an = randInt(-8, 9);
+      const a1 = an - (n - 1) * d;
+      const anReal = a1 + (n - 1) * d;
+      const sn = (n * (a1 + anReal)) / 2;
+      return {
+        kind: 'fill',
+        topic: '等差應用',
+        title: '從和反推首項',
+        prompt: `已知等差數列 a_n=${anReal}，S_n=${sn}，n=${n}，d=${d}。\n求 a_1。`,
+        answer: a1,
+        hint: `用 S_n = n(a_1 + a_n)/2，代入已知 a_n 即可求 a_1。`,
+        explain: `a_1 = (2S_n/n) - a_n = (2×${sn}/${n}) - ${anReal} = ${a1}。`,
+        formula: 'S_n = n(a_1 + a_n)/2',
+        terms: sequenceTerms('arith', a1, d, n, { limit: 7 })
+      };
+    };
+
+    const mkGeoRatioFromTerms = () => {
+      const r = randChoice([2, 3, -2, -3]);
+      const a1 = randInt(-8, 8) || 1;
+      const n = randInt(3, 7);
+      const an = a1 * Math.pow(r, n - 1);
+      return {
+        kind: 'fill',
+        topic: '等比數列',
+        title: '反推公比',
+        prompt: `已知等比數列 a_1=${a1}，a_${n}=${an}。\n求公比 r。`,
+        answer: r,
+        hint: `先由 a_n = a_1 r^(n-1) 得 r = (a_n/a_1)^(1/(n-1))。`,
+        explain: `a_n/a_1 = ${an}/${a1}，故 r = ${r}。`,
+        formula: 'a_n = a_1 r^(n-1)',
+        terms: sequenceTerms('geo', a1, r, n, { limit: 7 })
+      };
+    };
+
+    const mkGeoMiddleTerm = () => {
+      const a1 = randChoice([2, 3, 4, -2, -3, 4, -4, 5, -5]);
+      const r = randChoice([2, 3, -2, -3]);
+      const a2 = a1 * r;
+      const a4 = a1 * Math.pow(r, 3);
+      const a3 = a1 * Math.pow(r, 2);
+      return {
+        kind: 'fill',
+        topic: '等比中項',
+        title: '等比中項',
+        prompt: `已知等比數列 a_2=${a2}，a_4=${a4}。\n求 a_3。`,
+        answer: a3,
+        hint: '等比數列中項 = 相鄰兩項乘積的平方根，或 a_3 = a_2×r。',
+        explain: `a_3 = a_2×r = ${a2}×${r} = ${a3}，同時也驗證 (a_3)^2 = a_2×a_4。`,
+        formula: 'a_3² = a_2·a_4',
+        terms: [a1, a2, a3, a4]
+      };
+    };
+
+    const mkGeoFirstFromSum = () => {
+      const r = randChoice([2, 3, -2, -3]);
+      const n = randInt(3, 7);
+      const a1 = randInt(2, 8);
+      const sn = a1 * (Math.pow(r, n) - 1) / (r - 1);
+      return {
+        kind: 'fill',
+        topic: '等比級數反推',
+        title: '從和反推首項',
+        prompt: `已知等比數列前 ${n} 項和 S_${n}=${sn}，公比 r=${r}。\n求 a_1。`,
+        answer: a1,
+        hint: `反過來用 S_n = a_1(r^n -1)/(r-1)。`,
+        explain: `a_1 = S_n (r-1)/(r^n - 1) = ${sn}(${r}-1)/(${Math.pow(r, n)}-1) = ${a1}。`,
+        formula: 'S_n = a_1(r^n -1)/(r-1)',
+        terms: sequenceTerms('geo', a1, r, n, { limit: 7 })
+      };
+    };
+
+    const mkChoiceQuestion = () => {
+      const candidates = [
+        { seq: [2, 4, 6, 8, 10], type: '等差數列' },
+        { seq: [3, 9, 27, 81], type: '等比數列' },
+        { seq: [1, 5, 9, 17], type: '都不是' },
+        { seq: [8, 7, 6, 5, 4], type: '等差數列' },
+        { seq: [2, 6, 18, 54], type: '等比數列' },
+        { seq: [5, 3, 1, -1], type: '等差數列' },
+        { seq: [1, 4, 9, 16], type: '都不是' }
+      ];
+      const c = randChoice(candidates);
+      const options = shuffle(['等差數列', '等比數列', '都不是']);
+      const answerIndex = options.indexOf(c.type);
+      return {
+        kind: 'choice',
+        topic: '數列判斷',
+        title: '辨識數列類型',
+        prompt: `請判斷序列 (${c.seq.join('，')}) 的類型：`,
+        options,
+        answer: { index: answerIndex },
+        hint: '等差：相鄰差值固定。等比：相鄰比值固定。',
+        explain: `序列 (${c.seq.join('，')}) 的特徵為：${c.type}。`,
+        formula: '依差值或比值判斷',
+        terms: c.seq
+      };
+    };
+
+    const QUESTION_TEMPLATES = [
+      { kind: 'fill', topic: '等差數列第 n 項', weight: 18, build: mkArithNthTerm },
+      { kind: 'fill', topic: '反推公差', weight: 14, build: mkArithDiff },
+      { kind: 'fill', topic: '等差級數前 n 項和', weight: 12, build: mkArithSum },
+      { kind: 'fill', topic: '等比數列第 n 項', weight: 18, build: mkGeoNthTerm },
+      { kind: 'fill', topic: '等比級數前 n 項和', weight: 14, build: mkGeoSum },
+      { kind: 'fill', topic: '無窮等比級數和', weight: 8, build: mkGeoInfinite },
+      { kind: 'fill', topic: '情境題', weight: 10, build: mkArithContext },
+      { kind: 'fill', topic: '等比反推首項', weight: 6, build: mkGeoBackSolveFirst },
+      { kind: 'fill', topic: '等差中項', weight: 8, build: mkArithFindFirstFromMiddle },
+      { kind: 'fill', topic: '等差反推', weight: 8, build: mkArithFirstFromSum },
+      { kind: 'fill', topic: '等比反推公比', weight: 8, build: mkGeoRatioFromTerms },
+      { kind: 'fill', topic: '等比中項', weight: 7, build: mkGeoMiddleTerm },
+      { kind: 'fill', topic: '等比反推首項', weight: 7, build: mkGeoFirstFromSum },
+      { kind: 'choice', topic: '數列判斷', weight: 16, build: mkChoiceQuestion }
+    ];
+
+    const mkNumQuestion = () => ({ source: 'builtin', ...pickWeighted(QUESTION_TEMPLATES).build() });
+
+    const generateQuestion = (mode = state.mode) => {
+      const fromBank = useExternalQuestion(mode) ? pickExternalQuestion(mode) : null;
+      return fromBank || mkNumQuestion();
+    };
+
+    const setMode = (mode) => {
+      state.mode = mode;
+      state.answerRevealed = false;
+      stopExamTimer();
+      ui.modePill.textContent = `模式：${mode === 'practice' ? '練習模式' : '考試模式'}`;
+      ui.resultSection.classList.add('hidden');
+      ui.hintArea.classList.remove('hidden');
+      ui.feedbackArea.classList.add('hidden');
+      ui.questionTitle.textContent = mode === 'practice' ? '練習模式' : '考試模式';
+      ui.questionBody.textContent = mode === 'practice' ? '按「開始練習」開始。' : '按「開始考試（10題）」開始，考試中不提供提示。';
+      ui.questionMeta.textContent = '';
+      ui.sequencePreview.innerHTML = '';
+      ui.feedbackArea.textContent = '';
+      ui.hintArea.textContent = '';
+      ui.choiceArea.classList.add('hidden');
+      ui.fillArea.classList.remove('hidden');
+      ui.answerInput.value = '';
+      ui.answerInput.disabled = false;
+      renderProgress(0, 0);
+      if (mode === 'practice') {
+        ui.practiceModeBtn.classList.remove('secondary');
+        ui.examModeBtn.classList.add('secondary');
+      } else {
+        ui.practiceModeBtn.classList.add('secondary');
+        ui.examModeBtn.classList.remove('secondary');
+      }
+      updateTop();
+    };
+
+    const setMeta = (q) => {
+      const pieces = [];
+      if (q.source) pieces.push(`題庫：${q.source === 'external' ? '外部題庫' : '內建題庫'}`);
+      if (q.topic) pieces.push(`主題：${q.topic}`);
+      if (q.formula) pieces.push(`公式：${q.formula}`);
+      ui.questionMeta.textContent = pieces.join(' ｜ ');
+    };
+
+    const answerText = (q) => {
+      if (q.kind === 'choice') return q.options[q.answer.index];
+      if (typeof q.answerText === 'string' && q.answerText !== '') return q.answerText;
+      return fmtNum(q.answer);
+    };
+
+    const renderQuestion = (q, index = 1, total = 1) => {
+      state.current = q;
+      state.answerRevealed = false;
+      ui.questionTitle.textContent = q.title || '題目';
+      ui.questionBody.textContent = q.prompt;
+      setMeta(q);
+      ui.feedbackArea.classList.add('hidden');
+      ui.feedbackArea.textContent = '';
+      ui.hintArea.classList.add('hidden');
+      ui.hintArea.textContent = '';
+      ui.answerInput.value = '';
+      ui.answerInput.disabled = false;
+
+      if (q.kind === 'choice') {
+        ui.fillArea.classList.add('hidden');
+        ui.choiceArea.classList.remove('hidden');
+        ui.choiceArea.innerHTML = '';
+        q.options.forEach((opt, idx) => {
+          const label = document.createElement('label');
+          label.className = 'choice';
+          label.innerHTML = `<input type="radio" name="choice" value="${idx}" /> ${opt}`;
+          ui.choiceArea.appendChild(label);
+        });
+      } else {
+        ui.choiceArea.classList.add('hidden');
+        ui.fillArea.classList.remove('hidden');
+      }
+
+      if (q.terms && q.terms.length) {
+        ui.sequencePreview.innerHTML = `<div class="small">前幾項：</div><div class="term-track">${q.terms.map((v, i) => `<div class="term">a<sub>${i + 1}</sub><br/><b>${fmtNum(v)}</b></div>`).join('')}</div>`;
+      } else {
+        ui.sequencePreview.innerHTML = '';
+      }
+
+      ui.qIndex.textContent = index;
+      ui.qTotal.textContent = total;
+      renderProgress(index, total);
+      ui.reviewWrongBtn.classList.toggle('hidden', state.wrongQuestions.length === 0);
+    };
+
+    const getCurrentAnswer = () => {
+      if (state.current.kind === 'choice') {
+        const picked = document.querySelector('input[name="choice"]:checked');
+        return picked ? Number(picked.value) : null;
+      }
+      return ui.answerInput.value;
+    };
+
+    const isCorrect = (q, userAnswer) => {
+      if (q.kind === 'choice') return Number(userAnswer) === q.answer.index;
+      const v = parseAnswer(userAnswer);
+      return Number.isFinite(v) && almostEq(v, q.answer);
+    };
+
+    const checkAndRenderPractice = (skipFeedback = false) => {
+      const raw = getCurrentAnswer();
+      const pass = raw !== null && raw !== '';
+      if (!pass) return;
+      const right = isCorrect(state.current, raw);
+      state.practice.answered += 1;
+      if (right) {
+        state.practice.correct += 1;
+      } else {
+        state.practice.wrong += 1;
+        state.wrongQuestions.push(JSON.parse(JSON.stringify(state.current)));
+      }
+      if (!skipFeedback) {
+        ui.feedbackArea.classList.remove('hidden');
+        ui.feedbackArea.className = `feedback ${right ? 'success' : 'error'}`;
+        const a = answerText(state.current);
+        ui.feedbackArea.textContent = (right ? '答對了！' : `答錯了，正確答案是 ${a}。`) + `\n\n${state.current.explain}`;
+      }
+      if (state.current.kind === 'choice') {
+        document.querySelectorAll('input[name="choice"]').forEach((r) => (r.disabled = true));
+      } else {
+        ui.answerInput.disabled = true;
+      }
+      updateTop();
+      state.answerRevealed = true;
+    };
+
+    const submitPractice = () => {
+      if (!state.current) return;
+      if (state.answerRevealed) return;
+      checkAndRenderPractice();
+    };
+
+    const updateTop = () => {
+      ui.correctCount.textContent = state.practice.correct;
+      ui.wrongCount.textContent = state.practice.wrong;
+      ui.answeredCount.textContent = state.practice.answered;
+    };
+
+    const renderProgress = (idx, total) => {
+      if (!total) {
+        ui.progressBar.style.width = '0%';
+        return;
+      }
+      ui.progressBar.style.width = `${Math.min(100, Math.max(0, (idx / total) * 100))}%`;
+    };
+
+    const startPractice = () => {
+      state.practice = { total: 0, correct: 0, wrong: 0, answered: 0 };
+      state.current = generateQuestion();
+      renderQuestion(state.current, 1, 1);
+      ui.answerInput.value = '';
+      ui.answerInput.focus();
+    };
+
+    const nextPractice = () => {
+      state.current = generateQuestion();
+      const idx = state.practice.answered + 1;
+      renderQuestion(state.current, idx, idx);
+      ui.answerInput.focus();
+    };
+
+    const startExam = () => {
+      state.exam.questions = Array.from({ length: CONFIG.examQuestions }, () => generateQuestion('exam'));
+      state.exam.answers = Array(CONFIG.examQuestions).fill(null);
+      state.exam.index = 0;
+      state.exam.started = true;
+      state.exam.correct = 0;
+      state.exam.timer = CONFIG.examMinutes * 60;
+      renderQuestion(state.exam.questions[0], 1, CONFIG.examQuestions);
+      startExamTimer();
+    };
+
+    const startExamTimer = () => {
+      stopExamTimer();
+      const tick = () => {
+        const mins = String(Math.floor(state.exam.timer / 60)).padStart(2, '0');
+        const secs = String(state.exam.timer % 60).padStart(2, '0');
+        ui.timer.textContent = `${mins}:${secs}`;
+        if (state.exam.timer <= 0) {
+          finishExam();
+          return;
+        }
+        state.exam.timer -= 1;
+      };
+      tick();
+      state.exam.intervalId = setInterval(tick, 1000);
+    };
+
+    const stopExamTimer = () => {
+      if (state.exam.intervalId) clearInterval(state.exam.intervalId);
+      state.exam.intervalId = null;
+      if (!state.exam.started) ui.timer.textContent = '—';
+    };
+
+    const saveExamAnswer = () => {
+      state.exam.answers[state.exam.index] = getCurrentAnswer();
+    };
+
+    const gradeExam = () => {
+      return state.exam.questions.reduce((acc, q, i) => {
+        return acc + (isCorrect(q, state.exam.answers[i]) ? 1 : 0);
+      }, 0);
+    };
+
+    const finishExam = () => {
+      stopExamTimer();
+      state.exam.started = false;
+      const score = gradeExam();
+      const rows = state.exam.questions.map((q, i) => {
+        const a = state.exam.answers[i];
+        return {
+          i: i + 1,
+          prompt: q.prompt,
+          user: a === null || a === '' ? '未作答' : String(a),
+          ans: answerText(q),
+          ok: isCorrect(q, a)
+        };
+      });
+
+      ui.examSummary.textContent = `你答對 ${score}/${CONFIG.examQuestions} 題。`;
+      ui.examTableWrap.innerHTML = `
+        <table class="result-table">
+          <thead><tr><th>題號</th><th>題目</th><th>你的作答</th><th>正確答案</th><th>判斷</th></tr></thead>
+          <tbody>
+            ${rows.map((r) => `<tr><td>${r.i}</td><td>${r.prompt}</td><td>${r.user}</td><td>${r.ans}</td><td class="${r.ok ? 'ok' : 'bad'}">${r.ok ? '正確' : '錯誤'}</td></tr>`).join('')}
+          </tbody>
+        </table>`;
+      ui.resultSection.classList.remove('hidden');
+      ui.questionTitle.textContent = '考試完成';
+      ui.questionBody.textContent = '已提交。可再次開始新一輪考試。';
+      ui.choiceArea.classList.add('hidden');
+      ui.fillArea.classList.remove('hidden');
+      ui.answerInput.value = '';
+      ui.timer.textContent = '—';
+      state.current = null;
+    };
+
+    const nextExam = () => {
+      if (state.exam.index >= CONFIG.examQuestions - 1) {
+        finishExam();
+        return;
+      }
+      saveExamAnswer();
+      state.exam.index += 1;
+      renderQuestion(state.exam.questions[state.exam.index], state.exam.index + 1, CONFIG.examQuestions);
+      const previous = state.exam.answers[state.exam.index];
+      if (state.current.kind === 'choice' && previous !== null) {
+        const r = document.querySelector(`input[name="choice"][value="${previous}"]`);
+        if (r) r.checked = true;
+      }
+      if (state.current.kind !== 'choice' && previous !== null) {
+        ui.answerInput.value = previous;
+      }
+    };
+
+    const submitExamStep = () => {
+      if (!state.current || !state.exam.started) return;
+      saveExamAnswer();
+      if (state.exam.index === CONFIG.examQuestions - 1) {
+        finishExam();
+      } else {
+        nextExam();
+      }
+    };
+
+    const showHint = () => {
+      if (state.mode !== 'practice' || !state.current || state.mode === 'practice' && state.current.kind === 'fill' && state.answerInput === undefined) return;
+      ui.hintArea.classList.remove('hidden');
+      ui.hintArea.textContent = `提示：${state.current.hint}`;
+    };
+
+    const reviewWrong = () => {
+      if (!state.wrongQuestions.length) return;
+      const list = state.wrongQuestions;
+      state.wrongQuestions = [];
+      state.current = list[0];
+      renderQuestion(state.current, 1, list.length);
+    };
+
+    ui.startPracticeBtn.addEventListener('click', () => {
+      setMode('practice');
+      startPractice();
+    });
+    ui.startExamBtn.addEventListener('click', () => {
+      setMode('exam');
+      startExam();
+    });
+    ui.submitBtn.addEventListener('click', () => {
+      if (state.mode === 'practice') {
+        submitPractice();
+      } else if (state.mode === 'exam') {
+        submitExamStep();
+      }
+    });
+    ui.nextBtn.addEventListener('click', () => {
+      if (state.mode === 'practice') {
+        if (!state.answerRevealed) submitPractice();
+        else nextPractice();
+      } else if (state.mode === 'exam' && state.exam.started) {
+        submitExamStep();
+      }
+    });
+    ui.hintBtn.addEventListener('click', showHint);
+    ui.practiceModeBtn.addEventListener('click', () => setMode('practice'));
+    ui.examModeBtn.addEventListener('click', () => setMode('exam'));
+    ui.reviewWrongBtn.addEventListener('click', reviewWrong);
+    ui.closeResultBtn.addEventListener('click', () => ui.resultSection.classList.add('hidden'));
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && document.activeElement === ui.answerInput) {
+        ui.submitBtn.click();
+      }
+    });
+
+    ui.reviewWrongBtn.classList.add('hidden');
+    updateTop();
+
+    const bootstrap = async () => {
+      await loadExternalQuestionBank();
+      setMode('practice');
+    };
+
+    bootstrap();
+  </script>
+</body>
+</html>

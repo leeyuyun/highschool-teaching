@@ -64,8 +64,7 @@ http://localhost:8080/數列級數/sequence-series-demo.html
 ## 5. 常用維護規則
 
 - 新增外部題目時，先填好 `topic` 與 `title`，並指定 `scope`。
-- 若要調整考試/練習難度比例，修改 `sequence-series-demo.html` 中：
-  - `BANK_CONFIG.useExternalRateByMode`
+- 若要調整各主題抽題傾向，修改 `sequence-series-demo.html` 中：
   - `BANK_CONFIG.externalTopicWeights`
 - 問題修正以此順序進行：
   1. 檢查題目資料欄位是否完整  
@@ -76,6 +75,10 @@ http://localhost:8080/數列級數/sequence-series-demo.html
 
 - 2026-02-26：建立「數列級數」教學專案，包含主頁面與外部題庫
 - 2026-02-26：建立題目類型統計、外部題庫權重抽題、Git tag 與上傳至 repo
+- 2026-02-27：整合內建與外部題庫為單一出題池，固定題型選單可直接涵蓋全部主題
+- 2026-02-27：新增「看完整解題過程」按鈕；Hint 與完整解法分離，且考試模式禁用提示/解法
+- 2026-02-27：補齊遞迴數列與幾何加權級數題型（含 `a_n=2a_{n-1}+7`、`a_n=4a_{n-1}+3n+6`、`Σ4^k(3k^2+4k+5)`）
+- 2026-02-27：修正 LaTeX/MathJax 顯示與 fallback 轉換（下標、上標、求和上/下限、分數與遞迴表達式）
 
 ## 7. 注意事項
 

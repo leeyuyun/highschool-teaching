@@ -67,6 +67,35 @@
       gap: 10px;
     }
 
+    .practice-config {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: auto auto minmax(220px, 1fr);
+      gap: 10px;
+      align-items: center;
+    }
+
+    .practice-config .small {
+      margin-right: 4px;
+    }
+
+    .mode-switch {
+      display: inline-flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .practice-topic-label {
+      color: var(--muted);
+      font-size: 13px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .practice-topic-label select {
+      width: 100%;
+    }
+
     button {
       border: 0;
       border-radius: 10px;
@@ -82,6 +111,14 @@
     button.secondary { background: rgba(255, 255, 255, 0.09); border: 1px solid rgba(175, 190, 218, 0.35); }
     button.warning { background: linear-gradient(120deg, #ff6b8f, #ff8f5a); }
     button.success { background: linear-gradient(120deg, #2fcf87, #35e7a5); }
+    button:disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+      filter: saturate(0.55);
+    }
+    button:disabled:hover { transform: none; box-shadow: none; }
 
     .mode-pill {
       color: #d7ecff;
@@ -171,7 +208,6 @@
       margin-top: 12px;
       border-radius: 8px;
       color: #dfffee;
-      display: none;
     }
 
     .timer { font-weight: 700; color: #ffdf87; }
@@ -181,6 +217,28 @@
     .result-table th { background: rgba(255, 255, 255, 0.06); }
     .ok { color: var(--ok); font-weight: 700; }
     .bad { color: var(--danger); font-weight: 700; }
+    .math-fallback { font-family: 'Times New Roman', 'Noto Serif TC', serif; letter-spacing: 0.01em; }
+    .math-fallback sub { font-size: 0.78em; vertical-align: sub; }
+    .math-fallback sup { font-size: 0.78em; vertical-align: super; }
+    .math-sum {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      margin: 0 0.08em;
+      vertical-align: middle;
+    }
+    .math-sum-upper,
+    .math-sum-lower {
+      font-size: 0.64em;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .math-sum-symbol {
+      font-size: 1.06em;
+      line-height: 0.9;
+    }
 
     .hidden { display: none; }
     .progress { margin-top: 8px; height: 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.15); overflow: hidden; }
@@ -221,9 +279,58 @@
     @keyframes fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
     @media (min-width: 800px) {
-      .toolbar { grid-template-columns: repeat(4, minmax(100px, auto)); }
+      .toolbar { grid-template-columns: repeat(5, minmax(100px, auto)); }
+    }
+
+    @media (max-width: 799px) {
+      .practice-config {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
+  <script>
+    window.__mathRenderState = { ready: false, failed: false, queue: [] };
+    window.__loadMathJaxFallback = function () {
+      if (window.__mathRenderState.ready || window.__mathRenderState.failed) return;
+      window.__mathRenderState.fallbackStep = (window.__mathRenderState.fallbackStep || 0) + 1;
+      const urls = [
+        'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js',
+        'https://unpkg.com/mathjax@3/es5/tex-svg.js'
+      ];
+      const idx = window.__mathRenderState.fallbackStep - 1;
+      if (idx >= urls.length) {
+        window.__mathRenderState.failed = true;
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = urls[idx];
+      s.defer = true;
+      s.onerror = function () {
+        window.__loadMathJaxFallback();
+      };
+      document.head.appendChild(s);
+    };
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)'], ['$', '$']]
+      },
+      svg: { fontCache: 'global' },
+      startup: {
+        ready: () => {
+          MathJax.startup.defaultReady();
+          const state = window.__mathRenderState || (window.__mathRenderState = { ready: false, failed: false, queue: [] });
+          state.ready = true;
+          state.failed = false;
+          const pending = Array.isArray(state.queue) ? state.queue.slice() : [];
+          state.queue = [];
+          if (pending.length) {
+            MathJax.typesetPromise(pending).catch(() => {});
+          }
+        }
+      }
+    };
+  </script>
+  <script defer src="./vendor/mathjax/tex-svg.js" onerror="window.__loadMathJaxFallback && window.__loadMathJaxFallback()"></script>
 </head>
 <body>
   <div class="wrap">
@@ -240,7 +347,22 @@
         <button id="practiceModeBtn">切換到 練習模式</button>
         <button class="secondary" id="examModeBtn">切換到 考試模式</button>
         <button class="warning" id="hintBtn">看提示</button>
+        <button class="secondary" id="solutionBtn" disabled>看完整解題過程</button>
         <button class="secondary" id="nextBtn">下一題</button>
+      </div>
+
+      <div id="practiceConfig" class="practice-config">
+        <div class="small">練習出題：</div>
+        <div class="mode-switch">
+          <button id="randomTypeBtn" type="button">隨機題型</button>
+          <button id="fixedTypeBtn" type="button" class="secondary">固定題型</button>
+        </div>
+        <label class="practice-topic-label">
+          固定題型（整合題庫）
+          <select id="practiceTopicSelect" disabled>
+            <option value="">請先載入題型</option>
+          </select>
+        </label>
       </div>
 
       <div class="stats">
@@ -264,11 +386,13 @@
         <div id="choiceArea" class="choice-list hidden"></div>
         <div id="fillArea" class="answer-row">
           <input id="answerInput" type="text" placeholder="輸入答案（可輸入分數，例如 3/4）" />
+        </div>
+        <div class="answer-row">
           <button id="submitBtn">提交答案</button>
         </div>
       </div>
 
-      <div id="hintArea" class="hint-box"></div>
+      <div id="hintArea" class="hint-box hidden"></div>
       <div id="feedbackArea" class="feedback hidden"></div>
 
       <div id="actionArea" class="answer-row" style="margin-top: 12px;">
@@ -287,35 +411,9 @@
 
     <section class="card">
       <h3>題目類型對照表（現有題庫）</h3>
-      <div class="type-filter">
-        <label>
-          題庫來源
-          <select id="filterSource">
-            <option value="all">全部</option>
-            <option value="external">外部題庫</option>
-            <option value="builtin">內建題庫</option>
-          </select>
-        </label>
-        <label>
-          題型（topic）
-          <select id="filterTopic">
-            <option value="">全部</option>
-          </select>
-        </label>
-        <label>
-          題型敘述（title）
-          <select id="filterTitle">
-            <option value="">全部</option>
-          </select>
-        </label>
-        <div class="answer-row">
-          <button class="secondary" id="clearFilterBtn" type="button">清除篩選</button>
-        </div>
-      </div>
-      <p id="filterSummary" class="footnote">目前可抽題數：載入中</p>
       <div class="type-map">
         <div>
-          <p><strong>外部題庫 Topic（15 種）</strong></p>
+          <p><strong>整合 Topic（示例）</strong></p>
           <ul>
             <li>對消型</li>
             <li>數列判斷</li>
@@ -323,6 +421,7 @@
             <li>數學歸納法</li>
             <li>無窮等比級數</li>
             <li>等差中項</li>
+            <li>等比中項</li>
             <li>等差應用</li>
             <li>等差數列</li>
             <li>等差級數</li>
@@ -330,12 +429,13 @@
             <li>等比數列</li>
             <li>等比級數</li>
             <li>級數求和</li>
+            <li>幾何加權級數</li>
             <li>通項公式</li>
             <li>遞迴數列</li>
           </ul>
         </div>
         <div>
-          <p><strong>外部題庫 Title（20 種）</strong></p>
+          <p><strong>Title（示例）</strong></p>
           <ul>
             <li>第 n 項</li>
             <li>前 n 項和</li>
@@ -355,30 +455,29 @@
             <li>Σk²</li>
             <li>Σ(2k-1)</li>
             <li>Σ(1/k-1/(k+1))</li>
+            <li>非齊次通項判斷</li>
+            <li>非齊次型求值</li>
+            <li>a_n=ra_{n-1}+pn+q</li>
+            <li>a_n 用 n 表示（通式）</li>
+            <li>Σ4^k、Σk4^k、Σk²4^k</li>
+            <li>Σ4^k(3k²+4k+5)</li>
             <li>重組求和</li>
             <li>命題判斷</li>
           </ul>
         </div>
         <div>
-          <p><strong>內建題庫 Title（13 種）</strong></p>
+          <p><strong>遞迴數列三類（本次補強）</strong></p>
           <ul>
-            <li>等差數列第 n 項</li>
-            <li>反推公差</li>
-            <li>前 n 項和</li>
-            <li>等比數列第 n 項</li>
-            <li>等比級數前 n 項和</li>
-            <li>無窮級數和</li>
-            <li>情境題</li>
-            <li>反推首項</li>
-            <li>中項題</li>
-            <li>從和反推首項</li>
-            <li>反推公比</li>
-            <li>等比中項</li>
-            <li>辨識數列類型</li>
+            <li>等差遞迴：a_{n+1}=a_n+d</li>
+            <li>等比遞迴：a_{n+1}=ra_n</li>
+            <li>非齊次遞迴：a_n=2a_{n-1}+7</li>
+            <li>n 項驅動：a_n=4a_{n-1}+3n+6</li>
+            <li>通式展開：a_n = r^(n-1)a_1 + Σ r^(n-k)f(k)</li>
+            <li>closed form：Σ4^k(3k²+4k+5)</li>
           </ul>
         </div>
       </div>
-      <p class="footnote">提示：題目會依 <code>topic</code> 當作類型主軸做抽題，<code>title</code> 是更細的題目敘述型態。</p>
+      <p class="footnote">提示：所有題目來源已整合成單一題庫，固定題型會依 <code>topic</code> 抽題，並優先保留同題型多變化敘述。</p>
     </section>
 
     <footer class="footnote">建議每個主題先在練習模式做 10 題感受，再進入考試模式。</footer>
@@ -392,6 +491,7 @@
       wrongQuestions: [],
       questionBank: [],
       questionBankLoaded: false,
+      practiceSelector: { mode: 'random', key: '', label: '' },
       practice: { total: 0, correct: 0, wrong: 0, answered: 0 },
       exam: {
         questions: [],
@@ -407,13 +507,13 @@
     const CONFIG = { examMinutes: 8, examQuestions: 10 };
     const BANK_CONFIG = {
       sourceUrl: './sequence-series-bank.json',
-      useExternalRateByMode: { practice: 0.65, exam: 0.9 },
       externalTopicWeights: {
         practice: {
           '等差數列': 10,
           '等比數列': 10,
           '等差級數': 8,
           '等比級數': 8,
+          '幾何加權級數': 6,
           '等差應用': 7,
           '等比應用': 7,
           '通項公式': 6,
@@ -432,6 +532,7 @@
           '等比數列': 8,
           '等差級數': 7,
           '等比級數': 7,
+          '幾何加權級數': 5,
           '遞迴數列': 6,
           '級數求和': 6,
           '通項公式': 6,
@@ -471,8 +572,13 @@
       startExamBtn: document.getElementById('startExamBtn'),
       practiceModeBtn: document.getElementById('practiceModeBtn'),
       examModeBtn: document.getElementById('examModeBtn'),
+      practiceConfig: document.getElementById('practiceConfig'),
+      randomTypeBtn: document.getElementById('randomTypeBtn'),
+      fixedTypeBtn: document.getElementById('fixedTypeBtn'),
+      practiceTopicSelect: document.getElementById('practiceTopicSelect'),
       submitBtn: document.getElementById('submitBtn'),
       hintBtn: document.getElementById('hintBtn'),
+      solutionBtn: document.getElementById('solutionBtn'),
       nextBtn: document.getElementById('nextBtn'),
       resultSection: document.getElementById('resultSection'),
       examSummary: document.getElementById('examSummary'),
@@ -490,7 +596,35 @@
       }
       return a;
     };
-    const fmtNum = (x) => (Number.isInteger(x) ? String(x) : Number.parseFloat(x.toFixed(8)).toString());
+    const fmtNum = (x) => {
+      if (typeof x === 'string') {
+        const parsed = parseAnswer(x);
+        return Number.isFinite(parsed) ? fmtNum(parsed) : x;
+      }
+      if (!Number.isFinite(x)) return String(x ?? '');
+      return Number.isInteger(x) ? String(x) : Number.parseFloat(x.toFixed(8)).toString();
+    };
+    const gcd = (a, b) => {
+      let x = Math.abs(a);
+      let y = Math.abs(b);
+      while (y) {
+        const t = x % y;
+        x = y;
+        y = t;
+      }
+      return x || 1;
+    };
+    const asFractionText = (num, den) => {
+      if (!Number.isFinite(num) || !Number.isFinite(den) || den === 0) return '';
+      const sign = den < 0 ? -1 : 1;
+      let n = Math.round(num * sign);
+      let d = Math.round(Math.abs(den));
+      const g = gcd(n, d);
+      n /= g;
+      d /= g;
+      if (d === 1) return String(n);
+      return `${n}/${d}`;
+    };
     const parseAnswer = (raw) => {
       if (raw === null || raw === undefined) return NaN;
       let s = String(raw).trim().replace(/，/g, '.');
@@ -502,6 +636,226 @@
       return Number(s);
     };
     const cleanText = (v) => (v === null || v === undefined ? '' : String(v).trim());
+    const WORDING_STYLES = [
+      {
+        leadKnown: '已知',
+        askSolve: '求',
+        askCalc: '計算',
+        askJudge: '請判斷',
+        choiceLead: '下列何者為',
+        hintLead: '可先',
+        explainLead: '因此'
+      },
+      {
+        leadKnown: '已給定',
+        askSolve: '試求',
+        askCalc: '請計算',
+        askJudge: '請辨識',
+        choiceLead: '哪一個選項是',
+        hintLead: '建議先',
+        explainLead: '所以'
+      },
+      {
+        leadKnown: '題目給定',
+        askSolve: '請求',
+        askCalc: '請算出',
+        askJudge: '請判別',
+        choiceLead: '請選出',
+        hintLead: '先',
+        explainLead: '故'
+      }
+    ];
+    const TITLE_VARIANTS = {
+      '第 n 項': ['第 n 項', '求指定項', '代入求項'],
+      '前 n 項和': ['前 n 項和', '求部分和', '級數和計算'],
+      '代入算項': ['代入算項', '代入求值', '代值計算'],
+      '情境題': ['情境題', '應用情境', '文字應用題'],
+      '反推公差': ['反推公差', '由條件求公差', '公差回推'],
+      '反推公比': ['反推公比', '由條件求公比', '公比回推'],
+      '命題判斷': ['命題判斷', '命題檢核', '命題驗證'],
+      '等差型': ['等差型', '固定差遞迴', '線性遞增型'],
+      '等比型': ['等比型', '固定比遞迴', '倍數遞迴型'],
+      '非齊次通項判斷': ['非齊次通項判斷', '非齊次公式辨識', '遞迴通項選擇'],
+      '非齊次型求值': ['非齊次型求值', '非齊次遞迴求項', '平移法求值'],
+      'a_n=2a_{n-1}+7 類型': ['a_n=2a_{n-1}+7 類型', '2a_{n-1}+7 變形題', '非齊次遞迴例題'],
+      'n 依賴非齊次遞迴': ['n 依賴非齊次遞迴', 'a_n=ra_{n-1}+pn+q', '含 n 項遞迴求值'],
+      'n 驅動遞迴通式': ['n 驅動遞迴通式', '含 n 項遞迴通項', '遞迴展開通式'],
+      '幾何級數 closed form': ['幾何級數 closed form', 'Σ4^k 通式', '幾何和 closed form'],
+      'Σk4^k closed form': ['Σk4^k closed form', '加權幾何一階', 'Σk4^k 通式'],
+      'Σk²4^k closed form': ['Σk²4^k closed form', '加權幾何二階', 'Σk²4^k 通式'],
+      'Σ4^k(3k²+4k+5) closed form': ['Σ4^k(3k²+4k+5) closed form', '綜合加權和通式', '多項式加權幾何和'],
+      '序列類型': ['序列類型', '數列類別判定', '數列型態判斷'],
+      '辨識數列類型': ['辨識數列類型', '數列判斷', '序列判別']
+    };
+    const applyWordingStyle = (text, style, type = 'prompt') => {
+      if (!text) return '';
+      let out = String(text);
+      out = out.replace(/已知/g, style.leadKnown);
+      out = out.replace(/下列何者為/g, style.choiceLead);
+      out = out.replace(/請判斷/g, style.askJudge);
+      out = out.replace(/計算/g, style.askCalc);
+      out = out.replace(/求([^\n。；，]*)/g, (_, tail) => `${style.askSolve}${tail}`);
+      if (type === 'hint') {
+        out = out.replace(/^先/g, style.hintLead);
+        out = out.replace(/^可先/g, style.hintLead);
+        out = out.replace(/^建議先/g, style.hintLead);
+      }
+      if (type === 'explain') {
+        out = out.replace(/^因此/g, style.explainLead);
+        out = out.replace(/^所以/g, style.explainLead);
+        out = out.replace(/^故/g, style.explainLead);
+      }
+      return out;
+    };
+    const applyTitleVariant = (title) => {
+      const source = cleanText(title);
+      const variants = TITLE_VARIANTS[source];
+      if (!variants || !variants.length) return source;
+      return randChoice(variants);
+    };
+    const shouldStylizeOption = (text) => /[a-zA-Z]_|Σ|=|\^|\//.test(String(text));
+    const withWordingVariant = (rawQuestion) => {
+      if (!rawQuestion || rawQuestion.source === 'system') return rawQuestion;
+      const q = JSON.parse(JSON.stringify(rawQuestion));
+      const style = randChoice(WORDING_STYLES);
+      if (q.title) q.title = applyTitleVariant(q.title);
+      if (q.prompt) q.prompt = applyWordingStyle(q.prompt, style, 'prompt');
+      if (q.hint) q.hint = applyWordingStyle(q.hint, style, 'hint');
+      if (q.explain) q.explain = applyWordingStyle(q.explain, style, 'explain');
+      if (Array.isArray(q.options)) {
+        q.options = q.options.map((opt) => (shouldStylizeOption(opt) ? applyWordingStyle(opt, style, 'option') : opt));
+      }
+      return q;
+    };
+    const escapeHtml = (text) => String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+    const latexifyText = (text) => {
+      const tokens = [];
+      const hold = (expr) => {
+        const idx = tokens.push(`\\(${expr}\\)`) - 1;
+        return `§§${idx}§§`;
+      };
+      const mathExpr = (expr) => String(expr)
+        .replace(/²/g, '^2')
+        .replace(/³/g, '^3')
+        .replace(/×/g, '\\times')
+        .replace(/λ/g, '\\lambda')
+        .replace(/\b(\d+)\s*\/\s*(\d+)\b/g, '\\frac{$1}{$2}');
+
+      let source = String(text).replace(/\(\((\d+)\s*\/\s*(\d+)\)\)/g, '($1/$2)');
+
+      // Handle combined forms first to avoid breaking into fragments like "U_n^(p)".
+      source = source
+        .replace(/([A-Za-z])_\{([^}]+)\}\^\(([^)]+)\)/g, (_, s, sub, sup) => hold(`${s}_{${sub}}^{${mathExpr(sup)}}`))
+        .replace(/([A-Za-z])_(\d+|n)\^\(([^)]+)\)/g, (_, s, sub, sup) => hold(`${s}_{${sub}}^{${mathExpr(sup)}}`))
+        .replace(/([A-Za-z])_\{([^}]+)\}\^([A-Za-z0-9+\-]+)/g, (_, s, sub, sup) => hold(`${s}_{${sub}}^{${sup}}`))
+        .replace(/([A-Za-z])_(\d+|n)\^([A-Za-z0-9+\-]+)/g, (_, s, sub, sup) => hold(`${s}_{${sub}}^{${sup}}`))
+        .replace(/λ\s*\(([^()]+)\)\^\(([^)]+)\)/g, (_, base, sup) => hold(`\\lambda(${mathExpr(base)})^{${mathExpr(sup)}}`))
+        .replace(/λ\s*\(([^()]+)\)\^([A-Za-z0-9+\-]+)/g, (_, base, sup) => hold(`\\lambda(${mathExpr(base)})^{${sup}}`))
+        .replace(/\(([^()]+)\)\^\(([^)]+)\)/g, (_, base, sup) => hold(`(${mathExpr(base)})^{${mathExpr(sup)}}`))
+        .replace(/\(([^()]+)\)\^([A-Za-z0-9+\-]+)/g, (_, base, sup) => hold(`(${mathExpr(base)})^{${sup}}`));
+
+      source = source
+        .replace(/Σ\s*_\{([^}]*)\}\s*\^\{([^}]*)\}/g, (_, from, to) => hold(`\\sum\\limits_{${from}}^{${to}}`))
+        .replace(/Σ\s*_\{([^}]*)\}\s*\^([^\s。；，,)]+)/g, (_, from, to) => hold(`\\sum\\limits_{${from}}^{${to}}`))
+        .replace(/Σ\s*_\{([^}]*)\}/g, (_, from) => hold(`\\sum\\limits_{${from}}`))
+        .replace(/Σ\s*([A-Za-z0-9]+(?:\^[A-Za-z0-9]+|[²³])?)/g, (_, tail) => hold(`\\sum ${mathExpr(tail)}`))
+        .replace(/Σ(?!\s*_)/g, () => hold('\\sum'));
+
+      source = source
+        .replace(/([A-Za-z])_\{([^}]+)\}/g, (_, symbol, sub) => hold(`${symbol}_{${sub}}`))
+        .replace(/([A-Za-z])_(\d+|n)/g, (_, symbol, sub) => hold(`${symbol}_{${sub}}`))
+        .replace(/\b([A-Za-z0-9]+)\^\(([^)]+)\)/g, (_, base, p) => hold(`${base}^{${mathExpr(p)}}`))
+        .replace(/\b([A-Za-z0-9]+)\^([A-Za-z0-9]+)\b/g, (_, base, p) => hold(`${base}^{${p}}`))
+        .replace(/\b(\d+)\s*\/\s*(\d+)\b/g, (_, a, b) => hold(`\\frac{${a}}{${b}}`));
+
+      return source.replace(/§§(\d+)§§/g, (_, idx) => tokens[Number(idx)] || '');
+    };
+    const latexFallbackText = (text) => String(text)
+      .replace(/\\\((.*?)\\\)/g, '$1')
+      .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '$1/$2')
+      .replace(/\\sum/g, 'Σ')
+      .replace(/\\limits/g, '')
+      .replace(/\\displaystyle/g, '')
+      .replace(/\\infty/g, '∞')
+      .replace(/\^\{([^{}]+)\}/g, '^($1)')
+      .replace(/_\{([^{}]+)\}/g, '_($1)');
+    const latexBasicToHtml = (expr) => String(expr)
+      .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '$1/$2')
+      .replace(/\\times/g, '×')
+      .replace(/\\lambda/g, 'λ')
+      .replace(/\\infty/g, '∞')
+      .replace(/\\limits/g, '')
+      .replace(/\\displaystyle/g, '')
+      .replace(/\^\{([^{}]+)\}/g, '<sup>$1</sup>')
+      .replace(/_\{([^{}]+)\}/g, '<sub>$1</sub>')
+      .replace(/\^([A-Za-z0-9+\-]+)/g, '<sup>$1</sup>')
+      .replace(/_([A-Za-z0-9+\-]+)/g, '<sub>$1</sub>')
+      .replace(/\\/g, '');
+    const latexExprToHtml = (expr) => {
+      const sumTokens = [];
+      let source = String(expr);
+      source = source.replace(/\\sum(?:\\limits)?_\{([^{}]+)\}\^\{([^{}]+)\}/g, (_, from, to) => {
+        const token = `ZZSUMTOKEN${sumTokens.length}ZZ`;
+        sumTokens.push(`<span class="math-sum"><span class="math-sum-upper">${latexBasicToHtml(to)}</span><span class="math-sum-symbol">Σ</span><span class="math-sum-lower">${latexBasicToHtml(from)}</span></span>`);
+        return token;
+      });
+      source = source.replace(/\\sum(?:\\limits)?_\{([^{}]+)\}/g, (_, from) => {
+        const token = `ZZSUMTOKEN${sumTokens.length}ZZ`;
+        sumTokens.push(`<span class="math-sum"><span class="math-sum-symbol">Σ</span><span class="math-sum-lower">${latexBasicToHtml(from)}</span></span>`);
+        return token;
+      });
+      source = source.replace(/\\sum/g, 'Σ');
+      source = latexBasicToHtml(source);
+      return source.replace(/ZZSUMTOKEN(\d+)ZZ/g, (_, idx) => sumTokens[Number(idx)] || 'Σ');
+    };
+    const replaceRawLatexInline = (html) => String(html).replace(/\\\((.+?)\\\)/g, (_, expr) => `<span class=\"math-fallback\">${latexExprToHtml(expr)}</span>`);
+    const maybeApplyMathFallback = (el) => {
+      if (!el) return;
+      const html = String(el.innerHTML || '');
+      if (!/\\\(|\\frac|\\sum/.test(html)) return;
+      el.innerHTML = replaceRawLatexInline(html);
+    };
+    const getMathState = () => {
+      const host = typeof window !== 'undefined' ? window : globalThis;
+      if (!host.__mathRenderState) {
+        host.__mathRenderState = {
+          ready: Boolean(host.MathJax && typeof host.MathJax.typesetPromise === 'function'),
+          failed: false,
+          queue: []
+        };
+      }
+      return host.__mathRenderState;
+    };
+    const typesetMath = (el) => {
+      const host = typeof window !== 'undefined' ? window : globalThis;
+      const mj = host?.MathJax;
+      const state = getMathState();
+      if (state.failed) return;
+      if (mj && typeof mj.typesetPromise === 'function' && state.ready) {
+        mj.typesetPromise([el]).catch(() => {});
+        return;
+      }
+      if (!Array.isArray(state.queue)) state.queue = [];
+      if (!state.queue.includes(el)) state.queue.push(el);
+    };
+    const renderText = (el, text) => {
+      const safe = escapeHtml(text ?? '');
+      const latex = latexifyText(safe);
+      const state = getMathState();
+      if (state.failed) {
+        el.innerHTML = replaceRawLatexInline(latex.replace(/\n/g, '<br/>'));
+        return;
+      }
+      el.innerHTML = latex.replace(/\n/g, '<br/>');
+      typesetMath(el);
+      const host = typeof window !== 'undefined' ? window : globalThis;
+      host.setTimeout(() => maybeApplyMathFallback(el), state.ready ? 900 : 1600);
+    };
     const normalizeTerms = (raw) => {
       if (!Array.isArray(raw)) return [];
       return raw
@@ -541,7 +895,7 @@
 
     const normalizeExternalQuestion = (rawQuestion) => {
       if (!rawQuestion || typeof rawQuestion !== 'object') return null;
-      const topic = cleanText(rawQuestion.topic) || '外部題庫';
+      const topic = cleanText(rawQuestion.topic) || '整合題庫';
       const title = cleanText(rawQuestion.title) || '題目';
       const prompt = cleanText(rawQuestion.prompt);
       const kind = rawQuestion.kind === 'choice' ? 'choice' : 'fill';
@@ -571,7 +925,7 @@
           answer: { index: answerIndex },
           scope,
           terms,
-          source: 'external'
+          source: 'builtin'
         };
       }
 
@@ -590,7 +944,7 @@
         answerText,
         scope,
         terms,
-        source: 'external'
+        source: 'builtin'
       };
     };
 
@@ -601,7 +955,8 @@
           state.questionBankLoaded = false;
           return;
         }
-        const payload = await resp.json();
+        const rawText = await resp.text();
+        const payload = JSON.parse((rawText || '').replace(/^\uFEFF/, ''));
         const rawItems = Array.isArray(payload)
           ? payload
           : (Array.isArray(payload.items) ? payload.items : (Array.isArray(payload.questions) ? payload.questions : []));
@@ -631,23 +986,21 @@
       return 1;
     };
 
-    const pickExternalQuestion = (mode = 'practice') => {
-      if (!state.questionBank.length) return null;
-      const candidate = state.questionBank.filter((q) => q.scope === 'both' || q.scope === mode);
-      if (!candidate.length) return null;
+    const pickExternalQuestion = (mode = 'practice', topic = '') => {
+      const fallback = () => pickExternalFallbackQuestion(mode, topic);
+      if (!state.questionBank.length) return fallback();
+      const candidate = state.questionBank.filter((q) => {
+        const inScope = q.scope === 'both' || q.scope === mode;
+        if (!inScope) return false;
+        return !topic || q.topic === topic;
+      });
+      if (!candidate.length) return fallback();
       const weighted = candidate.map((question) => ({
         question,
         weight: getExternalTopicWeight(question.topic, mode)
       }));
       const picked = pickWeighted(weighted);
-      return picked ? JSON.parse(JSON.stringify(picked.question)) : null;
-    };
-
-    const useExternalQuestion = (mode = 'practice') => {
-      if (state.questionBank.length === 0) return false;
-      const rateByMode = BANK_CONFIG.useExternalRateByMode?.[mode];
-      const rate = Number.isFinite(rateByMode) ? rateByMode : (BANK_CONFIG.useExternalRate || 0);
-      return Math.random() < rate;
+      return picked ? JSON.parse(JSON.stringify(picked.question)) : fallback();
     };
 
     const mkArithNthTerm = () => {
@@ -917,28 +1270,813 @@
       };
     };
 
+    const asExternalQuestion = (builder, overrides = {}) => {
+      const base = builder();
+      return {
+        ...base,
+        ...overrides,
+        source: 'builtin',
+        scope: 'both',
+        topic: overrides.topic || base.topic
+      };
+    };
+
+    const mkExtTelescopingA = () => {
+      const n = randInt(6, 18);
+      const ans = asFractionText(n, n + 1);
+      return {
+        kind: 'fill',
+        topic: '對消型',
+        title: 'Σ(1/k-1/(k+1))',
+        prompt: `計算 Σ_{k=1}^{${n}} (1/k - 1/(k+1))。`,
+        answer: ans,
+        hint: '先展開前幾項，觀察中間項會互相對消。',
+        explain: `對消後剩下 1 - 1/${n + 1} = ${ans}。`,
+        formula: 'Σ(1/k-1/(k+1)) = 1 - 1/(n+1)'
+      };
+    };
+
+    const mkExtTelescopingB = () => {
+      const n = randInt(5, 16);
+      const ans = asFractionText(n, n + 1);
+      return {
+        kind: 'fill',
+        topic: '對消型',
+        title: 'Σ(1/(k(k+1)))',
+        prompt: `計算 Σ_{k=1}^{${n}} 1/(k(k+1))。`,
+        answer: ans,
+        hint: '先拆成 1/k - 1/(k+1)，再做對消。',
+        explain: `1/(k(k+1)) = 1/k - 1/(k+1)，故總和為 1 - 1/${n + 1} = ${ans}。`,
+        formula: '1/(k(k+1)) = 1/k - 1/(k+1)'
+      };
+    };
+
+    const mkExtTelescopingC = () => {
+      const n = randInt(4, 12);
+      const ans = asFractionText(n, 2 * (n + 1));
+      return {
+        kind: 'fill',
+        topic: '對消型',
+        title: 'Σ(1/(2k)-1/(2k+2))',
+        prompt: `計算 Σ_{k=1}^{${n}} (1/(2k) - 1/(2k+2))。`,
+        answer: ans,
+        hint: '展開後看見中間分數彼此抵消。',
+        explain: `對消後剩 1/2 - 1/${2 * (n + 1)} = ${ans}。`,
+        formula: '對消法'
+      };
+    };
+
+    const mkExtLimitLinear = () => {
+      const a = randChoice([2, 3, 4, 5, 6, 7]);
+      const c = randChoice([1, 2, 3, 4, 5]);
+      const b = randInt(-9, 9);
+      const d = randInt(-9, 9);
+      const ans = asFractionText(a, c);
+      return {
+        kind: 'fill',
+        topic: '數列極限',
+        title: '極限值',
+        prompt: `求數列 a_n = (${a}n${b >= 0 ? '+' : ''}${b})/(${c}n${d >= 0 ? '+' : ''}${d}) 的極限。`,
+        answer: ans,
+        hint: '分子、分母同除以 n。',
+        explain: `最高次係數比為 ${a}/${c}，極限為 ${ans}。`,
+        formula: 'lim (an+b)/(cn+d)=a/c'
+      };
+    };
+
+    const mkExtLimitQuadratic = () => {
+      const a = randChoice([1, 2, 3, 4, 5]);
+      const c = randChoice([1, 2, 3, 4]);
+      const b = randInt(-8, 8);
+      const d = randInt(-8, 8);
+      const ans = asFractionText(a, c);
+      return {
+        kind: 'fill',
+        topic: '數列極限',
+        title: '極限值',
+        prompt: `求數列 a_n = (${a}n^2${b >= 0 ? '+' : ''}${b}n+1)/(${c}n^2${d >= 0 ? '+' : ''}${d}) 的極限。`,
+        answer: ans,
+        hint: '分子、分母同除以 n^2。',
+        explain: `二次項係數比為 ${a}/${c}，所以極限是 ${ans}。`,
+        formula: '同次最高次項係數比'
+      };
+    };
+
+    const mkExtLimitZero = () => {
+      const a = randChoice([2, 3, 4, 5, 6, 7]);
+      const b = randInt(-7, 7);
+      return {
+        kind: 'fill',
+        topic: '數列極限',
+        title: '極限值',
+        prompt: `求數列 a_n = (${a}n${b >= 0 ? '+' : ''}${b})/(n^2+1) 的極限。`,
+        answer: 0,
+        hint: '分子為一次、分母為二次，整體會趨近 0。',
+        explain: '分子階數小於分母，故 n→∞ 時 a_n→0。',
+        formula: '分子階數 < 分母階數 ⇒ 極限 0'
+      };
+    };
+
+    const mkExtInductionBaseSum = () => ({
+      kind: 'fill',
+      topic: '數學歸納法',
+      title: '命題判斷',
+      prompt: '用歸納法證明 1+2+...+n = n(n+1)/2 時，基礎步 n=1，左式值為多少？',
+      answer: 1,
+      hint: '基礎步先直接代 n=1。',
+      explain: '左式只有 1，故值為 1；與右式 1(2)/2 相同。',
+      formula: '先驗證 P(1)'
+    });
+
+    const mkExtInductionBaseOdd = () => ({
+      kind: 'fill',
+      topic: '數學歸納法',
+      title: '命題判斷',
+      prompt: '用歸納法證明 1+3+...+(2n-1)=n^2 時，驗證 n=2，左式值為多少？',
+      answer: 4,
+      hint: '代 n=2，左式前兩個奇數相加。',
+      explain: '1+3=4，和右式 2^2 一致。',
+      formula: '先驗證 P(2)'
+    });
+
+    const mkExtInductionBaseSquare = () => ({
+      kind: 'fill',
+      topic: '數學歸納法',
+      title: '命題判斷',
+      prompt: '對命題 Σ_{k=1}^{n} k^2 = n(n+1)(2n+1)/6，驗證 n=3 時左式值為多少？',
+      answer: 14,
+      hint: '直接算 1^2+2^2+3^2。',
+      explain: '1+4+9=14，和右式 3×4×7/6 相同。',
+      formula: '先驗證小 n 值'
+    });
+
+    const mkExtSeriesSumK = () => {
+      const n = randInt(10, 35);
+      const ans = (n * (n + 1)) / 2;
+      return {
+        kind: 'fill',
+        topic: '級數求和',
+        title: 'Σk',
+        prompt: `計算 Σ_{k=1}^{${n}} k。`,
+        answer: ans,
+        hint: '套用等差和公式 n(n+1)/2。',
+        explain: `${n}×${n + 1}/2 = ${ans}。`,
+        formula: 'Σk = n(n+1)/2'
+      };
+    };
+
+    const mkExtSeriesSumK2 = () => {
+      const n = randInt(6, 16);
+      const ans = (n * (n + 1) * (2 * n + 1)) / 6;
+      return {
+        kind: 'fill',
+        topic: '級數求和',
+        title: 'Σk²',
+        prompt: `計算 Σ_{k=1}^{${n}} k²。`,
+        answer: ans,
+        hint: '使用平方和公式。',
+        explain: `${n}×${n + 1}×${2 * n + 1}/6 = ${ans}。`,
+        formula: 'Σk² = n(n+1)(2n+1)/6'
+      };
+    };
+
+    const mkExtSeriesOdd = () => {
+      const n = randInt(8, 20);
+      const ans = n * n;
+      return {
+        kind: 'fill',
+        topic: '級數求和',
+        title: 'Σ(2k-1)',
+        prompt: `計算 Σ_{k=1}^{${n}} (2k-1)。`,
+        answer: ans,
+        hint: '前 n 個奇數和為 n²。',
+        explain: `Σ(2k-1) = ${n}² = ${ans}。`,
+        formula: '1+3+...+(2n-1)=n²'
+      };
+    };
+
+    const mkExtGeomWeightedBase = () => {
+      const correct = 'Σ_{k=1}^{n} 4^k = (4^(n+1)-4)/3';
+      const options = shuffle([
+        correct,
+        'Σ_{k=1}^{n} 4^k = (4^n-1)/3',
+        'Σ_{k=1}^{n} 4^k = (4^(n+1)-1)/3',
+        'Σ_{k=1}^{n} 4^k = (4^(n+1)-4)/4'
+      ]);
+      return {
+        kind: 'choice',
+        topic: '幾何加權級數',
+        title: '幾何級數 closed form',
+        prompt: '下列何者為 Σ_{k=1}^{n} 4^k 的 closed form？',
+        options,
+        answer: { index: options.indexOf(correct) },
+        hint: '先套用等比級數和 Σ r^k = (r^(n+1)-r)/(r-1)。',
+        explain: '令 r=4，得 Σ_{k=1}^{n}4^k=(4^(n+1)-4)/3。',
+        formula: 'Σ_{k=1}^{n} r^k = (r^(n+1)-r)/(r-1)'
+      };
+    };
+
+    const mkExtGeomWeightedLinear = () => {
+      const correct = 'Σ_{k=1}^{n} k×4^k = (4^(n+1)(3n-1)+4)/9';
+      const options = shuffle([
+        correct,
+        'Σ_{k=1}^{n} k×4^k = (4^(n+1)(3n+1)-4)/9',
+        'Σ_{k=1}^{n} k×4^k = (4^n(3n-1)+4)/9',
+        'Σ_{k=1}^{n} k×4^k = (4^(n+1)(3n-1)-4)/9'
+      ]);
+      return {
+        kind: 'choice',
+        topic: '幾何加權級數',
+        title: 'Σk4^k closed form',
+        prompt: '下列何者為 Σ_{k=1}^{n} k×4^k 的 closed form？',
+        options,
+        answer: { index: options.indexOf(correct) },
+        hint: '設 S_n=Σ_{k=1}^{n}k4^k，先除以 4^n，令 U_n=S_n/4^n。\n由 S_n=S_{n-1}+n4^n 可得 U_n=(1/4)U_{n-1}+n（理由：先把指數成長因子 4^n 拉掉）。\n因右側是一次多項式 n，故可猜 U_n=An+B+λ(1/4)^n，等價於 S_n=4^n(An+B)+D。',
+        explain: '步驟 1：S_n=S_{n-1}+n4^n。\n步驟 2：兩邊同除 4^n，得 U_n=(1/4)U_{n-1}+n（理由：把遞迴改成「多項式驅動」型）。\n步驟 3：由右側為一次多項式，猜特解 U_n^(p)=An+B，再加齊次解 λ(1/4)^n。\n步驟 4：代回解係數後，換回 S_n=4^nU_n，可得 S_n=(4^(n+1)(3n-1)+4)/9。',
+        formula: 'U_n=(1/4)U_{n-1}+n，U_n=S_n/4^n'
+      };
+    };
+
+    const mkExtGeomWeightedQuadratic = () => {
+      const correct = 'Σ_{k=1}^{n} k^2×4^k = (4^n(36n^2-24n+20)-20)/27';
+      const options = shuffle([
+        correct,
+        'Σ_{k=1}^{n} k^2×4^k = (4^n(36n^2+24n+20)-20)/27',
+        'Σ_{k=1}^{n} k^2×4^k = (4^(n+1)(36n^2-24n+20)-20)/27',
+        'Σ_{k=1}^{n} k^2×4^k = (4^n(36n^2-24n+20)+20)/27'
+      ]);
+      return {
+        kind: 'choice',
+        topic: '幾何加權級數',
+        title: 'Σk²4^k closed form',
+        prompt: '下列何者為 Σ_{k=1}^{n} k^2×4^k 的 closed form？',
+        options,
+        answer: { index: options.indexOf(correct) },
+        hint: '步驟 1：先設 T_n=Σ_{k=1}^{n}k^2 4^k，並做正規化 U_n=T_n/4^n。\n步驟 2：比較 U_n 與 (1/4)U_{n-1}：\nU_n=Σ_{k=1}^{n}k^2 4^{k-n}，(1/4)U_{n-1}=Σ_{k=1}^{n-1}k^2 4^{k-n}。\n兩式相減時，k=1 到 n-1 的同次項完全對消，只剩 k=n 這一項，所以 U_n-(1/4)U_{n-1}=n^2。\n步驟 3：右側是二次多項式 n^2，故特解可猜 U_n^(p)=An^2+Bn+C；再加齊次解 λ(1/4)^n。換回 T_n 即 T_n=4^n(An^2+Bn+C)+D。',
+        explain: '步驟 1：定義 T_n=Σ_{k=1}^{n}k^2 4^k，目標是求 closed form。\n步驟 2：先除掉指數因子，設 U_n=T_n/4^n。這樣可把「每步乘 4」的影響抽離，留下多項式遞迴。\n步驟 3：把兩個和式並排比較：\nU_n=Σ_{k=1}^{n}k^2 4^{k-n}\n(1/4)U_{n-1}=Σ_{k=1}^{n-1}k^2 4^{k-n}\n相減後，k=1,...,n-1 全部對消，只剩最後一項 n^2，所以 U_n-(1/4)U_{n-1}=n^2。\n步驟 4：為何猜二次？因為遞迴右側是二次多項式 n^2，左側是 U_n 與位移項 U_{n-1} 的線性組合，不會提高多項式次數，所以特解可設 U_n^(p)=An^2+Bn+C。\n步驟 5：再加齊次解 U_n^(h)=λ(1/4)^n，故 U_n=An^2+Bn+C+λ(1/4)^n。\n步驟 6：代回 U_n-(1/4)U_{n-1}=n^2 比較係數，可得 A=4/3，B=-8/9，C=20/27；用初值 T_0=0（即 U_0=0）可得 λ=-20/27。\n步驟 7：乘回 4^n：T_n=4^nU_n=(4^n(36n^2-24n+20)-20)/27。',
+        formula: 'U_n-(1/4)U_{n-1}=n^2，U_n=T_n/4^n，T_n=Σ_{k=1}^{n}k^2 4^k'
+      };
+    };
+
+    const mkExtGeomWeightedPolyClosed = () => {
+      const correct = 'Σ_{k=1}^{n} 4^k(3k^2+4k+5) = (4^n(36n^2+24n+64)-64)/9';
+      const options = shuffle([
+        correct,
+        'Σ_{k=1}^{n} 4^k(3k^2+4k+5) = (4^n(36n^2+24n+64)+64)/9',
+        'Σ_{k=1}^{n} 4^k(3k^2+4k+5) = (4^(n+1)(36n^2+24n+64)-64)/9',
+        'Σ_{k=1}^{n} 4^k(3k^2+4k+5) = (4^n(36n^2-24n+64)-64)/9'
+      ]);
+      return {
+        kind: 'choice',
+        topic: '幾何加權級數',
+        title: 'Σ4^k(3k²+4k+5) closed form',
+        prompt: '求 Σ_{k=1}^{n} 4^k(3k^2+4k+5) 的 closed form，下列何者正確？',
+        options,
+        answer: { index: options.indexOf(correct) },
+        hint: '先做線性拆分：Σ4^k(3k^2+4k+5)=3Σ(k^2 4^k)+4Σ(k4^k)+5Σ(4^k)。\n理由：求和對加法與常數倍可分配。\n再分別代入 S2、S1、S0 的 closed form，最後合併同類項。',
+        explain: '步驟 1：設 S0=Σ_{k=1}^{n}4^k，S1=Σ_{k=1}^{n}k4^k，S2=Σ_{k=1}^{n}k^2 4^k。\n步驟 2：原式=3S2+4S1+5S0（理由：線性拆分）。\n步驟 3：代入 S0=(4^(n+1)-4)/3，S1=(4^(n+1)(3n-1)+4)/9，S2=(4^n(36n^2-24n+20)-20)/27。\n步驟 4：通分並整理 4^n 與常數項，可得 (4^n(36n^2+24n+64)-64)/9。',
+        formula: '線性組合：Σ4^k(ak^2+bk+c)=aΣ(k^2 4^k)+bΣ(k4^k)+cΣ4^k'
+      };
+    };
+
+    const mkExtArithMiddleAlt = () => {
+      const a5 = randInt(-8, 20);
+      const d = randChoice([-6, -4, -2, 2, 3, 4, 5]);
+      const a6 = a5 + d;
+      const a7 = a5 + 2 * d;
+      return {
+        kind: 'fill',
+        topic: '等差中項',
+        title: '已知 a5、a7 求 a6',
+        prompt: `已知等差數列 a_5=${a5}，a_7=${a7}，求 a_6。`,
+        answer: a6,
+        hint: '等差中項是前後兩項的平均。',
+        explain: `a_6 = (a_5 + a_7)/2 = (${a5}+${a7})/2 = ${a6}。`,
+        formula: 'a_n=(a_{n-1}+a_{n+1})/2'
+      };
+    };
+
+    const mkExtGeneralLinear = () => {
+      const a = randChoice([2, 3, 4, 5, 6]);
+      const b = randInt(-9, 9);
+      const n = randInt(9, 30);
+      const ans = a * n + b;
+      return {
+        kind: 'fill',
+        topic: '通項公式',
+        title: '代入算項',
+        prompt: `已知通項公式 a_n=${a}n${b >= 0 ? '+' : ''}${b}，求 a_${n}。`,
+        answer: ans,
+        hint: '把 n 直接代入通項公式。',
+        explain: `a_${n} = ${a}×${n}${b >= 0 ? '+' : ''}${b} = ${ans}。`,
+        formula: '代入通項'
+      };
+    };
+
+    const mkExtGeneralQuadratic = () => {
+      const n = randInt(5, 15);
+      const ans = n * n + n + 1;
+      return {
+        kind: 'fill',
+        topic: '通項公式',
+        title: '代入算項',
+        prompt: `已知通項公式 a_n = n² + n + 1，求 a_${n}。`,
+        answer: ans,
+        hint: '逐項代入 n 的值計算。',
+        explain: `a_${n} = ${n}² + ${n} + 1 = ${ans}。`,
+        formula: '代入通項'
+      };
+    };
+
+    const mkExtGeneralGeo = () => {
+      const a1 = randInt(2, 7);
+      const r = randChoice([2, 3, -2, -3]);
+      const n = randInt(4, 8);
+      const ans = a1 * Math.pow(r, n - 1);
+      return {
+        kind: 'fill',
+        topic: '通項公式',
+        title: '代入算項',
+        prompt: `已知通項公式 a_n=${a1}×(${r})^(n-1)，求 a_${n}。`,
+        answer: ans,
+        hint: '先算指數，再乘首項。',
+        explain: `a_${n} = ${a1}×(${r})^${n - 1} = ${ans}。`,
+        formula: 'a_n = a_1 r^(n-1)'
+      };
+    };
+
+    const mkExtRecArith = () => {
+      const a1 = randInt(-6, 12);
+      const d = randChoice([-5, -3, -2, 2, 3, 4, 5]);
+      const n = randInt(6, 12);
+      const ans = a1 + (n - 1) * d;
+      return {
+        kind: 'fill',
+        topic: '遞迴數列',
+        title: '等差型',
+        prompt: `遞迴數列 a_1=${a1}，a_{n+1}=a_n${d >= 0 ? '+' : ''}${d}，求 a_${n}。`,
+        answer: ans,
+        hint: '每次固定加減常數，可視為等差數列。',
+        explain: `公差 d=${d}，故 a_${n}=${a1}+(${n}-1)×(${d})=${ans}。`,
+        formula: 'a_{n+1}=a_n+d'
+      };
+    };
+
+    const mkExtRecGeo = () => {
+      const a1 = randInt(1, 5);
+      const r = randChoice([2, 3, 4]);
+      const n = randInt(5, 9);
+      const ans = a1 * Math.pow(r, n - 1);
+      return {
+        kind: 'fill',
+        topic: '遞迴數列',
+        title: '等比型',
+        prompt: `遞迴數列 a_1=${a1}，a_{n+1}=${r}a_n，求 a_${n}。`,
+        answer: ans,
+        hint: '這是等比遞迴，通項為 a_n=a_1r^(n-1)。',
+        explain: `a_${n}=${a1}×${r}^${n - 1}=${ans}。`,
+        formula: 'a_{n+1}=ra_n'
+      };
+    };
+
+    const mkExtRecAffineChoice = () => {
+      const r = 2;
+      const preset = randChoice([
+        { a1: 2, c: 7 },
+        { a1: 3, c: 5 },
+        { a1: 4, c: 9 }
+      ]);
+      const { a1, c } = preset;
+      const shift = c / (r - 1);
+      const coeff = a1 + shift;
+      const correct = `a_n = ${coeff}×2^(n-1)-${shift}`;
+      const options = shuffle([
+        correct,
+        `a_n = ${a1}×2^(n-1)+${shift}`,
+        `a_n = ${coeff}×2^n-${shift}`,
+        `a_n = ${coeff}×2^(n-1)+${shift}`
+      ]);
+      return {
+        kind: 'choice',
+        topic: '遞迴數列',
+        title: '非齊次通項判斷',
+        prompt: `已知遞迴數列 a_1=${a1}，a_n=2a_{n-1}+${c}(n>=2)。\n下列何者為 a_n 的通項公式？`,
+        options,
+        answer: { index: options.indexOf(correct) },
+        hint: `先平移：令 b_n=a_n+${shift}，把遞迴改寫成等比型。`,
+        explain: `令 b_n=a_n+${shift}，得 b_n=2b_{n-1}，且 b_1=${a1 + shift}。故 b_n=${coeff}×2^(n-1)，所以 a_n=${coeff}×2^(n-1)-${shift}。`,
+        formula: '若 a_n=ra_{n-1}+c，令 b_n=a_n+c/(r-1)'
+      };
+    };
+
+    const mkExtRecAffineValue = () => {
+      const r = 2;
+      const a1 = randChoice([2, 3, 4, 5]);
+      const c = randChoice([5, 7, 9]);
+      const n = randInt(5, 9);
+      const shift = c / (r - 1);
+      const coeff = a1 + shift;
+      const ans = coeff * Math.pow(r, n - 1) - shift;
+      return {
+        kind: 'fill',
+        topic: '遞迴數列',
+        title: '非齊次型求值',
+        prompt: `已知遞迴數列 a_1=${a1}，a_n=2a_{n-1}+${c}(n>=2)，求 a_${n}。`,
+        answer: ans,
+        hint: `可先令 b_n=a_n+${shift}，化為 b_n=2b_{n-1}。`,
+        explain: `令 b_n=a_n+${shift}，則 b_1=${coeff}，且 b_n=${coeff}×2^(n-1)。因此 a_${n}=${coeff}×2^${n - 1}-${shift}=${ans}。`,
+        formula: '先平移成等比遞迴再求值'
+      };
+    };
+
+    const mkExtRecAffineFromSample = () => {
+      const n = randInt(5, 8);
+      const coeff = randChoice([8, 9, 10, 11]);
+      const c = 7;
+      const a1 = coeff - c;
+      const ans = coeff * Math.pow(2, n - 1) - c;
+      return {
+        kind: 'fill',
+        topic: '遞迴數列',
+        title: 'a_n=2a_{n-1}+7 類型',
+        prompt: `已知遞迴數列 a_1=${a1}，a_n=2a_{n-1}+7(n>=2)，求 a_${n}。`,
+        answer: ans,
+        hint: '這類題可用 a_n+7 做平移，轉成等比遞迴。',
+        explain: `令 b_n=a_n+7，則 b_n=2b_{n-1}，b_1=${coeff}，故 b_n=${coeff}×2^(n-1)。所以 a_${n}=${coeff}×2^${n - 1}-7=${ans}。`,
+        formula: 'a_n=2a_{n-1}+7'
+      };
+    };
+
+    const mkExtRecLinearNDriven = () => {
+      const preset = randChoice([
+        { a1: 2, r: 4, p: 3, q: 6, n: randChoice([4, 5]) },
+        { a1: 1, r: 3, p: 2, q: 4, n: randChoice([5, 6]) },
+        { a1: 3, r: 2, p: 4, q: 5, n: randChoice([6, 7]) }
+      ]);
+      const { a1, r, p, q, n } = preset;
+      const seq = [a1];
+      const steps = [];
+      for (let k = 2; k <= n; k++) {
+        const prev = seq[seq.length - 1];
+        const val = r * prev + p * k + q;
+        seq.push(val);
+        if (k <= Math.min(n, 5)) {
+          steps.push(`a_${k} = ${r}×${prev} + ${p}×${k} + ${q} = ${val}`);
+        }
+      }
+      const ans = seq[n - 1];
+      return {
+        kind: 'fill',
+        topic: '遞迴數列',
+        title: 'n 依賴非齊次遞迴',
+        prompt: `已知遞迴數列 a_1=${a1}，a_n=${r}a_{n-1}+${p}n+${q}(n>=2)，求 a_${n}。`,
+        answer: ans,
+        hint: `依序代入 n=2,3,...,${n}，每一步都使用 a_n=${r}a_{n-1}+${p}n+${q}。`,
+        explain: `${steps.join('；')}，故 a_${n}=${ans}。`,
+        formula: 'a_n=ra_{n-1}+pn+q'
+      };
+    };
+
+    const mkExtRecLinearNClosedFormSample = () => {
+      const a1 = randChoice([2, 3, 5]);
+      const correct = `a_n = 4^(n-1)×${a1} + Σ_{k=2}^{n} 4^(n-k)(3k+6)`;
+      const options = shuffle([
+        correct,
+        `a_n = 4^n×${a1} + Σ_{k=2}^{n} 4^(n-k)(3k+6)`,
+        `a_n = 4^(n-1)×${a1} + Σ_{k=1}^{n} 4^(n-k)(3k+6)`,
+        `a_n = 4^(n-1)×${a1} + Σ_{k=2}^{n} 4^(k-n)(3k+6)`
+      ]);
+      return {
+        kind: 'choice',
+        topic: '遞迴數列',
+        title: 'n 驅動遞迴通式',
+        prompt: `已知遞迴數列 a_1=${a1}，a_n=4a_{n-1}+3n+6(n>=2)。\n下列何者可正確表示 a_n（用 n 表示）？`,
+        options,
+        answer: { index: options.indexOf(correct) },
+        hint: '先把遞迴逐步展開到 a_1，再觀察每步新增項的權重。',
+        explain: `展開後可得 a_n = 4^(n-1)a_1 + Σ_{k=2}^{n} 4^(n-k)(3k+6)，代入 a_1=${a1} 即得正確選項。`,
+        formula: 'a_n = r^(n-1)a_1 + Σ_{k=2}^{n} r^(n-k)f(k)'
+      };
+    };
+
+    const mkExtRecLinearNClosedFormGeneral = () => {
+      const symbols = randChoice([
+        { r: 'r', p: 'p', q: 'q' },
+        { r: 'm', p: 'p', q: 'q' }
+      ]);
+      const { r, p, q } = symbols;
+      const correct = `a_n = ${r}^(n-1)a_1 + Σ_{k=2}^{n} ${r}^(n-k)(${p}k+${q})`;
+      const options = shuffle([
+        correct,
+        `a_n = ${r}^n a_1 + Σ_{k=2}^{n} ${r}^(n-k)(${p}k+${q})`,
+        `a_n = ${r}^(n-1)a_1 + Σ_{k=1}^{n} ${r}^(n-k)(${p}k+${q})`,
+        `a_n = ${r}^(n-1)a_1 + Σ_{k=2}^{n} ${r}^(k-n)(${p}k+${q})`
+      ]);
+      return {
+        kind: 'choice',
+        topic: '遞迴數列',
+        title: 'n 驅動遞迴通式',
+        prompt: `若遞迴關係為 a_n=${r}a_{n-1}+${p}n+${q}(n>=2)，且已知 a_1。\n下列何者為 a_n 的通式表示？`,
+        options,
+        answer: { index: options.indexOf(correct) },
+        hint: `把 a_n 反覆代回，直到出現 a_1，注意每次都會乘上 ${r}。`,
+        explain: `遞迴展開會得到首項 ${r}^(n-1)a_1，再加上各步驟新增項之加權和，故通式為 ${correct}。`,
+        formula: '展開法（迭代展開）'
+      };
+    };
+
+    const mkExtRecFib = () => {
+      const seq = [1, 1];
+      while (seq.length < 8) seq.push(seq[seq.length - 1] + seq[seq.length - 2]);
+      const n = randInt(5, 8);
+      const ans = seq[n - 1];
+      return {
+        kind: 'fill',
+        topic: '遞迴數列',
+        title: '重組求和',
+        prompt: `遞迴數列 a_1=1, a_2=1, a_{n+2}=a_{n+1}+a_n，求 a_${n}。`,
+        answer: ans,
+        hint: '由前兩項逐步往後推。',
+        explain: `依序推得 ${seq.slice(0, n).join('，')}，所以 a_${n}=${ans}。`,
+        formula: 'a_{n+2}=a_{n+1}+a_n'
+      };
+    };
+
+    const mkExtJudgeAlt = () => {
+      const candidates = [
+        { seq: [4, 8, 12, 16, 20], type: '等差數列' },
+        { seq: [6, 18, 54, 162], type: '等比數列' },
+        { seq: [2, 5, 10, 17, 26], type: '都不是' }
+      ];
+      const c = randChoice(candidates);
+      const options = shuffle(['等差數列', '等比數列', '都不是']);
+      const answerIndex = options.indexOf(c.type);
+      return {
+        kind: 'choice',
+        topic: '數列判斷',
+        title: '序列類型',
+        prompt: `判斷序列 (${c.seq.join('，')}) 的類型。`,
+        options,
+        answer: { index: answerIndex },
+        hint: '先看差，再看比。',
+        explain: `此序列判定為：${c.type}。`,
+        formula: '差固定→等差；比固定→等比'
+      };
+    };
+
+    const EXTERNAL_FALLBACK_BUILDERS = {
+      '對消型': [mkExtTelescopingA, mkExtTelescopingB, mkExtTelescopingC],
+      '數列判斷': [
+        () => asExternalQuestion(mkChoiceQuestion, { title: '序列類型' }),
+        mkExtJudgeAlt,
+        mkExtJudgeAlt
+      ],
+      '數列極限': [mkExtLimitLinear, mkExtLimitQuadratic, mkExtLimitZero],
+      '數學歸納法': [mkExtInductionBaseSum, mkExtInductionBaseOdd, mkExtInductionBaseSquare],
+      '無窮等比級數': [
+        () => asExternalQuestion(mkGeoInfinite, { title: '無窮和' }),
+        () => asExternalQuestion(mkGeoInfinite, { title: '無窮和（條件判斷）' }),
+        () => asExternalQuestion(mkGeoInfinite, { title: '無窮和（公式套用）' })
+      ],
+      '等差中項': [
+        () => asExternalQuestion(mkArithFindFirstFromMiddle, { title: '已知 a2、a4 求 a3' }),
+        () => asExternalQuestion(mkArithFindFirstFromMiddle, { title: '中項判斷' }),
+        mkExtArithMiddleAlt
+      ],
+      '等差應用': [
+        () => asExternalQuestion(mkArithContext, { title: '情境題' }),
+        () => asExternalQuestion(mkArithFirstFromSum, { title: '已知和反推首項' }),
+        () => asExternalQuestion(mkArithContext, { title: '情境題（總量）' })
+      ],
+      '等差數列': [
+        () => asExternalQuestion(mkArithNthTerm, { title: '第 n 項' }),
+        () => asExternalQuestion(mkArithDiff, { title: '反推公差' }),
+        () => asExternalQuestion(mkArithNthTerm, { title: '代入算項' })
+      ],
+      '等差級數': [
+        () => asExternalQuestion(mkArithSum, { title: '前 n 項和' }),
+        () => asExternalQuestion(mkArithSum, { title: '等差和公式' }),
+        () => asExternalQuestion(mkArithSum, { title: '第 n 項 + 前 n 項和' })
+      ],
+      '等比應用': [
+        () => asExternalQuestion(mkGeoBackSolveFirst, { title: '情境題' }),
+        () => asExternalQuestion(mkGeoNthTerm, { topic: '等比應用', title: '成長模型' }),
+        () => asExternalQuestion(mkGeoBackSolveFirst, { title: '反推首項' })
+      ],
+      '等比數列': [
+        () => asExternalQuestion(mkGeoNthTerm, { title: '第 n 項' }),
+        () => asExternalQuestion(mkGeoRatioFromTerms, { title: '反推公比' }),
+        () => asExternalQuestion(mkGeoNthTerm, { title: '代入算項' })
+      ],
+      '等比中項': [
+        () => asExternalQuestion(mkGeoMiddleTerm, { title: '已知 a2、a4 求 a3' }),
+        () => asExternalQuestion(mkGeoMiddleTerm, { title: '中項判斷' }),
+        () => asExternalQuestion(mkGeoMiddleTerm, { title: '平方關係驗證' })
+      ],
+      '等比級數': [
+        () => asExternalQuestion(mkGeoSum, { title: '前 n 項和' }),
+        () => asExternalQuestion(mkGeoFirstFromSum, { topic: '等比級數', title: '已知和反推首項' }),
+        () => asExternalQuestion(mkGeoSum, { title: '公式化簡' })
+      ],
+      '幾何加權級數': [
+        mkExtGeomWeightedBase,
+        mkExtGeomWeightedLinear,
+        mkExtGeomWeightedQuadratic,
+        mkExtGeomWeightedPolyClosed
+      ],
+      '級數求和': [mkExtSeriesSumK, mkExtSeriesSumK2, mkExtSeriesOdd],
+      '通項公式': [mkExtGeneralLinear, mkExtGeneralQuadratic, mkExtGeneralGeo],
+      '遞迴數列': [
+        mkExtRecArith,
+        mkExtRecGeo,
+        mkExtRecAffineChoice,
+        mkExtRecAffineValue,
+        mkExtRecAffineFromSample,
+        mkExtRecLinearNDriven,
+        mkExtRecLinearNClosedFormSample,
+        mkExtRecLinearNClosedFormGeneral,
+        mkExtRecFib
+      ]
+    };
+
+    const pickExternalFallbackQuestion = (mode = 'practice', topic = '') => {
+      const topics = topic
+        ? [topic]
+        : getConfiguredTopics();
+      const candidates = topics
+        .map((t) => ({ topic: t, builders: EXTERNAL_FALLBACK_BUILDERS[t] || [] }))
+        .filter((item) => item.builders.length);
+      if (!candidates.length) return null;
+      const topicItem = pickWeighted(candidates.map((item) => ({
+        topic: item.topic,
+        builders: item.builders,
+        weight: getExternalTopicWeight(item.topic, mode)
+      })));
+      if (!topicItem) return null;
+      const builder = randChoice(topicItem.builders);
+      if (!builder) return null;
+      const q = builder();
+      return q ? { source: 'builtin', scope: 'both', ...q } : null;
+    };
+
     const QUESTION_TEMPLATES = [
-      { kind: 'fill', topic: '等差數列第 n 項', weight: 18, build: mkArithNthTerm },
-      { kind: 'fill', topic: '反推公差', weight: 14, build: mkArithDiff },
-      { kind: 'fill', topic: '等差級數前 n 項和', weight: 12, build: mkArithSum },
-      { kind: 'fill', topic: '等比數列第 n 項', weight: 18, build: mkGeoNthTerm },
-      { kind: 'fill', topic: '等比級數前 n 項和', weight: 14, build: mkGeoSum },
-      { kind: 'fill', topic: '無窮等比級數和', weight: 8, build: mkGeoInfinite },
-      { kind: 'fill', topic: '情境題', weight: 10, build: mkArithContext },
-      { kind: 'fill', topic: '等比反推首項', weight: 6, build: mkGeoBackSolveFirst },
-      { kind: 'fill', topic: '等差中項', weight: 8, build: mkArithFindFirstFromMiddle },
-      { kind: 'fill', topic: '等差反推', weight: 8, build: mkArithFirstFromSum },
-      { kind: 'fill', topic: '等比反推公比', weight: 8, build: mkGeoRatioFromTerms },
-      { kind: 'fill', topic: '等比中項', weight: 7, build: mkGeoMiddleTerm },
-      { kind: 'fill', topic: '等比反推首項', weight: 7, build: mkGeoFirstFromSum },
-      { kind: 'choice', topic: '數列判斷', weight: 16, build: mkChoiceQuestion }
+      { kind: 'fill', topic: '等差數列第 n 項', mainTopic: '等差數列', weight: 18, build: mkArithNthTerm },
+      { kind: 'fill', topic: '反推公差', mainTopic: '等差數列', weight: 14, build: mkArithDiff },
+      { kind: 'fill', topic: '等差級數前 n 項和', mainTopic: '等差級數', weight: 12, build: mkArithSum },
+      { kind: 'fill', topic: '等比數列第 n 項', mainTopic: '等比數列', weight: 18, build: mkGeoNthTerm },
+      { kind: 'fill', topic: '等比級數前 n 項和', mainTopic: '等比級數', weight: 14, build: mkGeoSum },
+      { kind: 'fill', topic: '無窮等比級數和', mainTopic: '無窮等比級數', weight: 8, build: mkGeoInfinite },
+      { kind: 'fill', topic: '情境題', mainTopic: '等差應用', weight: 10, build: mkArithContext },
+      { kind: 'fill', topic: '等比反推首項', mainTopic: '等比應用', weight: 6, build: mkGeoBackSolveFirst },
+      { kind: 'fill', topic: '等差中項', mainTopic: '等差中項', weight: 8, build: mkArithFindFirstFromMiddle },
+      { kind: 'fill', topic: '等差反推', mainTopic: '等差應用', weight: 8, build: mkArithFirstFromSum },
+      { kind: 'fill', topic: '等比反推公比', mainTopic: '等比數列', weight: 8, build: mkGeoRatioFromTerms },
+      { kind: 'fill', topic: '等比中項', mainTopic: '等比中項', weight: 7, build: mkGeoMiddleTerm },
+      { kind: 'fill', topic: '等比反推首項', mainTopic: '等比級數反推', weight: 7, build: mkGeoFirstFromSum },
+      { kind: 'choice', topic: '幾何加權級數（Σ4^k）', mainTopic: '幾何加權級數', weight: 6, build: mkExtGeomWeightedBase },
+      { kind: 'choice', topic: '幾何加權級數（Σk4^k）', mainTopic: '幾何加權級數', weight: 6, build: mkExtGeomWeightedLinear },
+      { kind: 'choice', topic: '幾何加權級數（Σk²4^k）', mainTopic: '幾何加權級數', weight: 6, build: mkExtGeomWeightedQuadratic },
+      { kind: 'choice', topic: '幾何加權級數（綜合）', mainTopic: '幾何加權級數', weight: 6, build: mkExtGeomWeightedPolyClosed },
+      { kind: 'fill', topic: '遞迴數列（等差型）', mainTopic: '遞迴數列', weight: 7, build: mkExtRecArith },
+      { kind: 'fill', topic: '遞迴數列（等比型）', mainTopic: '遞迴數列', weight: 7, build: mkExtRecGeo },
+      { kind: 'choice', topic: '遞迴數列（非齊次）', mainTopic: '遞迴數列', weight: 7, build: mkExtRecAffineChoice },
+      { kind: 'fill', topic: '遞迴數列（n 項驅動）', mainTopic: '遞迴數列', weight: 7, build: mkExtRecLinearNDriven },
+      { kind: 'choice', topic: '遞迴數列（n 項通式）', mainTopic: '遞迴數列', weight: 7, build: mkExtRecLinearNClosedFormSample },
+      { kind: 'choice', topic: '數列判斷', mainTopic: '數列判斷', weight: 16, build: mkChoiceQuestion }
     ];
 
-    const mkNumQuestion = () => ({ source: 'builtin', ...pickWeighted(QUESTION_TEMPLATES).build() });
+    const getConfiguredTopics = () => {
+      const set = new Set();
+      Object.keys(BANK_CONFIG.externalTopicWeights?.practice || {}).forEach((topic) => set.add(topic));
+      Object.keys(BANK_CONFIG.externalTopicWeights?.exam || {}).forEach((topic) => set.add(topic));
+      return Array.from(set);
+    };
+
+    const getAllTopics = () => {
+      const set = new Set(getConfiguredTopics());
+      QUESTION_TEMPLATES.forEach((template) => {
+        if (template.mainTopic) set.add(template.mainTopic);
+        else if (template.topic) set.add(template.topic);
+      });
+      Object.keys(EXTERNAL_FALLBACK_BUILDERS).forEach((topic) => set.add(topic));
+      state.questionBank.forEach((question) => {
+        if (question.topic) set.add(question.topic);
+      });
+      return Array.from(set).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+    };
+
+    const buildFixedTypeOptions = () => {
+      return getAllTopics().map((topic) => ({
+        key: `topic:${topic}`,
+        label: topic,
+        topic
+      }));
+    };
+
+    const refreshPracticeTopicOptions = () => {
+      const options = buildFixedTypeOptions();
+      ui.practiceTopicSelect.innerHTML = '';
+
+      options.forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item.key;
+        option.textContent = item.label;
+        ui.practiceTopicSelect.appendChild(option);
+      });
+
+      if (!options.length) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = '目前沒有可用題型';
+        ui.practiceTopicSelect.appendChild(option);
+        state.practiceSelector.key = '';
+        state.practiceSelector.label = '';
+        return;
+      }
+
+      const keys = options.map((item) => item.key);
+      if (!keys.includes(state.practiceSelector.key)) {
+        state.practiceSelector.key = keys[0];
+      }
+      ui.practiceTopicSelect.value = state.practiceSelector.key;
+      const selected = options.find((item) => item.key === state.practiceSelector.key);
+      state.practiceSelector.label = selected ? selected.label : '';
+    };
+
+    const setPracticeSelectorMode = (mode) => {
+      state.practiceSelector.mode = mode === 'fixed' ? 'fixed' : 'random';
+      const fixed = state.practiceSelector.mode === 'fixed';
+      ui.randomTypeBtn.classList.toggle('secondary', fixed);
+      ui.fixedTypeBtn.classList.toggle('secondary', !fixed);
+      ui.practiceTopicSelect.disabled = !fixed;
+    };
+
+    const pickBuiltinTemplate = (topic = '', index = null) => {
+      const candidate = Number.isInteger(index)
+        ? QUESTION_TEMPLATES.filter((_, idx) => idx === index)
+        : (topic ? QUESTION_TEMPLATES.filter((template) => template.mainTopic === topic) : QUESTION_TEMPLATES);
+      if (!candidate.length) return null;
+      return pickWeighted(candidate);
+    };
+
+    const mkNumQuestion = (topic = '') => {
+      const picked = pickBuiltinTemplate(topic);
+      return picked ? { source: 'builtin', ...picked.build() } : null;
+    };
+
+    const pickMergedQuestion = (mode, topic = '') => {
+      const fromBank = pickExternalQuestion(mode, topic);
+      const fromTemplate = mkNumQuestion(topic);
+      if (fromBank && fromTemplate) {
+        return Math.random() < 0.5 ? fromBank : fromTemplate;
+      }
+      return fromBank || fromTemplate;
+    };
+
+    const pickQuestionByFixedOption = (mode, selectedKey) => {
+      if (!selectedKey || !selectedKey.startsWith('topic:')) return null;
+      const topic = selectedKey.slice('topic:'.length);
+      return pickMergedQuestion(mode, topic);
+    };
 
     const generateQuestion = (mode = state.mode) => {
-      const fromBank = useExternalQuestion(mode) ? pickExternalQuestion(mode) : null;
-      return fromBank || mkNumQuestion();
+      const selectedKey = mode === 'practice' && state.practiceSelector.mode === 'fixed'
+        ? state.practiceSelector.key
+        : '';
+      if (selectedKey) {
+        const fixedQuestion = pickQuestionByFixedOption(mode, selectedKey);
+        if (fixedQuestion) return withWordingVariant(fixedQuestion);
+        return {
+          kind: 'fill',
+          topic: state.practiceSelector.label || '固定題型',
+          title: '題型暫時無法出題',
+          prompt: `目前題型「${state.practiceSelector.label || selectedKey}」沒有可用題目，請改選其他題型後再練習。`,
+          answer: 0,
+          answerText: '請換題型',
+          hint: '此題型目前無可用題目。',
+          explain: '請切換到其他固定題型，或改用隨機出題。',
+          formula: 'N/A',
+          source: 'system'
+        };
+      }
+
+      return withWordingVariant(pickMergedQuestion(mode));
+    };
+
+    const syncHintButtonByMode = () => {
+      const enabled = state.mode === 'practice';
+      ui.hintBtn.disabled = !enabled;
+      ui.hintBtn.title = enabled ? '顯示提示（Hint）' : '考試模式禁止使用提示';
+    };
+
+    const syncSolutionButtonByState = () => {
+      const enabled = state.mode === 'practice' && Boolean(state.current) && state.answerRevealed;
+      ui.solutionBtn.disabled = !enabled;
+      if (state.mode !== 'practice') {
+        ui.solutionBtn.title = '考試模式禁止查看完整解題過程';
+        return;
+      }
+      ui.solutionBtn.title = enabled ? '顯示完整解題過程' : '請先提交答案後再查看';
     };
 
     const setMode = (mode) => {
@@ -947,7 +2085,8 @@
       stopExamTimer();
       ui.modePill.textContent = `模式：${mode === 'practice' ? '練習模式' : '考試模式'}`;
       ui.resultSection.classList.add('hidden');
-      ui.hintArea.classList.remove('hidden');
+      ui.practiceConfig.classList.toggle('hidden', mode !== 'practice');
+      ui.hintArea.classList.add('hidden');
       ui.feedbackArea.classList.add('hidden');
       ui.questionTitle.textContent = mode === 'practice' ? '練習模式' : '考試模式';
       ui.questionBody.textContent = mode === 'practice' ? '按「開始練習」開始。' : '按「開始考試（10題）」開始，考試中不提供提示。';
@@ -963,32 +2102,107 @@
       if (mode === 'practice') {
         ui.practiceModeBtn.classList.remove('secondary');
         ui.examModeBtn.classList.add('secondary');
+        setPracticeSelectorMode(state.practiceSelector.mode);
       } else {
         ui.practiceModeBtn.classList.add('secondary');
         ui.examModeBtn.classList.remove('secondary');
       }
+      syncHintButtonByMode();
+      syncSolutionButtonByState();
       updateTop();
     };
 
     const setMeta = (q) => {
       const pieces = [];
-      if (q.source) pieces.push(`題庫：${q.source === 'external' ? '外部題庫' : '內建題庫'}`);
+      pieces.push('題庫：整合題庫');
       if (q.topic) pieces.push(`主題：${q.topic}`);
       if (q.formula) pieces.push(`公式：${q.formula}`);
-      ui.questionMeta.textContent = pieces.join(' ｜ ');
+      if (state.mode === 'practice' && state.practiceSelector.mode === 'fixed' && state.practiceSelector.label) {
+        pieces.push(`出題設定：固定題型 ${state.practiceSelector.label}`);
+      }
+      renderText(ui.questionMeta, pieces.join(' ｜ '));
     };
 
     const answerText = (q) => {
       if (q.kind === 'choice') return q.options[q.answer.index];
       if (typeof q.answerText === 'string' && q.answerText !== '') return q.answerText;
+      if (typeof q.answer === 'string' && q.answer !== '') return q.answer;
       return fmtNum(q.answer);
+    };
+
+    const buildDetailedHint = (q) => {
+      const promptLines = cleanText(q.prompt)
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line);
+      const target = promptLines.find((line) => /求|判斷|計算/.test(line)) || '依題目條件求解';
+      const known = promptLines.filter((line) => line !== target).slice(0, 1);
+      const lines = [
+        '提示（Hint）',
+        `- 題型：${q.topic || q.title || '未分類'}`,
+        `- 目標：${target}`
+      ];
+      if (known.length) {
+        lines.push(`- 先抓已知：${known.join('；')}`);
+      }
+      if (q.formula) lines.push(`- 建議先用公式：${q.formula}`);
+      if (q.hint) lines.push(`- 下一步方向：${q.hint}`);
+      if (!q.formula && !q.hint) lines.push('- 下一步方向：先列式，再代入已知量。');
+      if (q.kind === 'choice') lines.push('- 選擇題技巧：先排除不符合定義的選項。');
+      lines.push('- 完整推導請先提交答案，再按「看完整解題過程」。');
+      return lines.join('\n');
+    };
+
+    const buildFullSolution = (q) => {
+      const promptLines = cleanText(q.prompt)
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line);
+      const target = promptLines.find((line) => /求|判斷|計算/.test(line)) || promptLines[promptLines.length - 1] || '完成題目要求';
+      const known = promptLines.filter((line) => line !== target);
+      const lines = [
+        '完整解題過程',
+        '',
+        '第 1 步：整理題目資訊',
+        `- 題型：${q.topic || q.title || '未分類'}`,
+        `- 題目目標：${target}`
+      ];
+      if (known.length) lines.push(`- 已知條件：${known.join('；')}`);
+      if (q.kind === 'choice' && Array.isArray(q.options)) {
+        lines.push(`- 選項：${q.options.join('、')}`);
+      }
+
+      lines.push(
+        '',
+        '第 2 步：選擇方法與公式',
+        `- 核心公式/觀念：${q.formula || q.hint || '依題型選對應公式。'}`
+      );
+      if (q.hint) lines.push(`- 運算方向：${q.hint}`);
+
+      lines.push(
+        '',
+        '第 3 步：計算與推導'
+      );
+      if (q.explain) {
+        lines.push(`- ${q.explain}`);
+      } else {
+        lines.push('- 依公式代入已知條件，逐步計算。');
+      }
+
+      lines.push(
+        '',
+        '第 4 步：答案與檢查',
+        `- 最終答案：${answerText(q)}`,
+        '- 檢查：將答案代回題目條件，確認結果一致。'
+      );
+      return lines.join('\n');
     };
 
     const renderQuestion = (q, index = 1, total = 1) => {
       state.current = q;
       state.answerRevealed = false;
       ui.questionTitle.textContent = q.title || '題目';
-      ui.questionBody.textContent = q.prompt;
+      renderText(ui.questionBody, q.prompt);
       setMeta(q);
       ui.feedbackArea.classList.add('hidden');
       ui.feedbackArea.textContent = '';
@@ -1004,7 +2218,15 @@
         q.options.forEach((opt, idx) => {
           const label = document.createElement('label');
           label.className = 'choice';
-          label.innerHTML = `<input type="radio" name="choice" value="${idx}" /> ${opt}`;
+          const input = document.createElement('input');
+          input.type = 'radio';
+          input.name = 'choice';
+          input.value = String(idx);
+          const textSpan = document.createElement('span');
+          renderText(textSpan, opt);
+          label.appendChild(input);
+          label.appendChild(document.createTextNode(' '));
+          label.appendChild(textSpan);
           ui.choiceArea.appendChild(label);
         });
       } else {
@@ -1022,6 +2244,7 @@
       ui.qTotal.textContent = total;
       renderProgress(index, total);
       ui.reviewWrongBtn.classList.toggle('hidden', state.wrongQuestions.length === 0);
+      syncSolutionButtonByState();
     };
 
     const getCurrentAnswer = () => {
@@ -1035,13 +2258,24 @@
     const isCorrect = (q, userAnswer) => {
       if (q.kind === 'choice') return Number(userAnswer) === q.answer.index;
       const v = parseAnswer(userAnswer);
-      return Number.isFinite(v) && almostEq(v, q.answer);
+      const expected = parseAnswer(q.answer);
+      return Number.isFinite(v) && Number.isFinite(expected) && almostEq(v, expected);
     };
 
     const checkAndRenderPractice = (skipFeedback = false) => {
       const raw = getCurrentAnswer();
       const pass = raw !== null && raw !== '';
-      if (!pass) return;
+      if (!pass) {
+        ui.feedbackArea.classList.remove('hidden');
+        ui.feedbackArea.className = 'feedback error';
+        renderText(
+          ui.feedbackArea,
+          state.current?.kind === 'choice'
+            ? '請先選擇一個選項，再提交答案。'
+            : '請先輸入答案，再提交答案。'
+        );
+        return;
+      }
       const right = isCorrect(state.current, raw);
       state.practice.answered += 1;
       if (right) {
@@ -1054,7 +2288,8 @@
         ui.feedbackArea.classList.remove('hidden');
         ui.feedbackArea.className = `feedback ${right ? 'success' : 'error'}`;
         const a = answerText(state.current);
-        ui.feedbackArea.textContent = (right ? '答對了！' : `答錯了，正確答案是 ${a}。`) + `\n\n${state.current.explain}`;
+        const explainText = state.current.explain || '可按「看完整解題過程」查看完整步驟解法。';
+        renderText(ui.feedbackArea, (right ? '答對了！' : `答錯了，正確答案是 ${a}。`) + `\n\n${explainText}`);
       }
       if (state.current.kind === 'choice') {
         document.querySelectorAll('input[name="choice"]').forEach((r) => (r.disabled = true));
@@ -1063,6 +2298,7 @@
       }
       updateTop();
       state.answerRevealed = true;
+      syncSolutionButtonByState();
     };
 
     const submitPractice = () => {
@@ -1174,6 +2410,7 @@
       ui.answerInput.value = '';
       ui.timer.textContent = '—';
       state.current = null;
+      syncSolutionButtonByState();
     };
 
     const nextExam = () => {
@@ -1205,9 +2442,15 @@
     };
 
     const showHint = () => {
-      if (state.mode !== 'practice' || !state.current || state.mode === 'practice' && state.current.kind === 'fill' && state.answerInput === undefined) return;
+      if (state.mode !== 'practice' || !state.current) return;
       ui.hintArea.classList.remove('hidden');
-      ui.hintArea.textContent = `提示：${state.current.hint}`;
+      renderText(ui.hintArea, buildDetailedHint(state.current));
+    };
+
+    const showFullSolution = () => {
+      if (state.mode !== 'practice' || !state.current || !state.answerRevealed) return;
+      ui.hintArea.classList.remove('hidden');
+      renderText(ui.hintArea, buildFullSolution(state.current));
     };
 
     const reviewWrong = () => {
@@ -1242,8 +2485,16 @@
       }
     });
     ui.hintBtn.addEventListener('click', showHint);
+    ui.solutionBtn.addEventListener('click', showFullSolution);
     ui.practiceModeBtn.addEventListener('click', () => setMode('practice'));
     ui.examModeBtn.addEventListener('click', () => setMode('exam'));
+    ui.randomTypeBtn.addEventListener('click', () => setPracticeSelectorMode('random'));
+    ui.fixedTypeBtn.addEventListener('click', () => setPracticeSelectorMode('fixed'));
+    ui.practiceTopicSelect.addEventListener('change', (e) => {
+      state.practiceSelector.key = e.target.value;
+      const selected = Array.from(e.target.options).find((opt) => opt.value === state.practiceSelector.key);
+      state.practiceSelector.label = selected ? selected.textContent : '';
+    });
     ui.reviewWrongBtn.addEventListener('click', reviewWrong);
     ui.closeResultBtn.addEventListener('click', () => ui.resultSection.classList.add('hidden'));
 
@@ -1258,6 +2509,8 @@
 
     const bootstrap = async () => {
       await loadExternalQuestionBank();
+      refreshPracticeTopicOptions();
+      setPracticeSelectorMode('random');
       setMode('practice');
     };
 
